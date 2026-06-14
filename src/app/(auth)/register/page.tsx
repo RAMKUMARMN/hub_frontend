@@ -1,145 +1,130 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Loader2, UserPlus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import api from "@/lib/api";
-import { useAuthStore } from "@/store/authStore";
-import type { TokenResponse, User } from "@/types";
+import AuthShell from "@/components/auth/AuthShell";
+import AuthTextField from "@/components/auth/AuthTextField";
 
-const schema = z
+const registerSchema = z
   .object({
-    full_name: z.string().min(2, "Name is required"),
-    email: z.string().email("Invalid email"),
-    phone: z.string().optional(),
+    fullName: z.string().trim().min(2, "Full name must be at least 2 characters"),
+    email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+    phone: z.string().trim().optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    confirm_password: z.string(),
+    confirmPassword: z.string().min(1, "Confirm your password"),
   })
-  .refine((d) => d.password === d.confirm_password, {
-    message: "Passwords do not match",
-    path: ["confirm_password"],
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords must match",
+    path: ["confirmPassword"],
   });
 
-type FormData = z.infer<typeof schema>;
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const [error, setError] = useState<string | null>(null);
-
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-  const onSubmit = async (data: FormData) => {
-    setError(null);
-    try {
-      // Register
-      await api.post("/auth/register", {
-        email: data.email,
-        password: data.password,
-        full_name: data.full_name,
-        phone: data.phone || undefined,
-      });
-
-      // Auto-login
-      const tokenRes = await api.post<TokenResponse>("/auth/login", {
-        email: data.email,
-        password: data.password,
-      });
-      const { access_token, refresh_token } = tokenRes.data;
-      const userRes = await api.get<User>("/auth/me", {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      setAuth(userRes.data, access_token, refresh_token);
-      router.push("/chat");
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
-        "Registration failed. Please try again.";
-      setError(message);
-    }
+  const onSubmit = async (data: RegisterFormData) => {
+    // TODO: Replace this console log with the backend registration integration.
+    console.log("Register form data", data);
+    await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
   return (
-    <div className="min-h-screen flex bg-cixio-dark">
-      {/* Left panel */}
-      <div className="hidden lg:flex flex-col items-center justify-center w-1/2 bg-gradient-to-br from-cixio-navy via-cixio-dark to-[#060F3A] p-12 relative overflow-hidden">
-        <div className="absolute top-[-80px] left-[-80px] w-80 h-80 rounded-full bg-cixio-blue/20 blur-3xl" />
-        <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 rounded-full bg-cixio-blue/15 blur-3xl" />
-        <img src="/cixio-logo-white.png" alt="Cixio" className="w-56 mb-10 relative z-10" />
-        <h2 className="text-white text-3xl font-bold text-center mb-4 relative z-10 leading-tight">
-          Join CixioHub today
-        </h2>
-        <p className="text-cixio-light/60 text-center text-sm max-w-xs relative z-10 leading-relaxed">
-          Your intelligent AI workspace. Get started in seconds.
+    <AuthShell
+      eyebrow="Create workspace access"
+      title="Start using CixioHub"
+      subtitle="Create an account for the CixioHub dashboard and keep your workspace ready across devices."
+      footerText="Already have an account?"
+      footerHref="/login"
+      footerLink="Login"
+    >
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-cixio-dark dark:text-white">Create account</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-cixio-light/65">
+          Enter your details to set up your account.
         </p>
       </div>
 
-      {/* Right panel */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 bg-cixio-bg py-10">
-        <div className="w-full max-w-md">
-          <div className="flex justify-center mb-8 lg:hidden">
-            <img src="/cixio-logo.png" alt="Cixio" className="h-10 w-auto" />
-          </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <AuthTextField
+          id="register-full-name"
+          label="Full name"
+          type="text"
+          placeholder="John Doe"
+          autoComplete="name"
+          error={errors.fullName?.message}
+          registration={register("fullName")}
+        />
 
-          <div className="card-cixio p-8 shadow-xl">
-            <h1 className="text-2xl font-bold mb-1 text-cixio-dark">Create account</h1>
-            <p className="text-sm text-gray-500 mb-6">Join CixioHub — TKM&apos;s AI platform</p>
+        <AuthTextField
+          id="register-email"
+          label="Email"
+          type="email"
+          placeholder="you@tkmce.ac.in"
+          autoComplete="email"
+          error={errors.email?.message}
+          registration={register("email")}
+        />
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {[
-                { label: "Full Name", name: "full_name", type: "text", placeholder: "John Doe" },
-                { label: "Email", name: "email", type: "email", placeholder: "you@tkmce.ac.in" },
-                { label: "Phone (optional)", name: "phone", type: "tel", placeholder: "+91 98765 43210" },
-                { label: "Password", name: "password", type: "password", placeholder: "••••••••" },
-                { label: "Confirm Password", name: "confirm_password", type: "password", placeholder: "••••••••" },
-              ].map(({ label, name, type, placeholder }) => (
-                <div key={name}>
-                  <label className="block text-sm font-semibold mb-1.5 text-gray-700">{label}</label>
-                  <input
-                    {...register(name as keyof FormData)}
-                    type={type}
-                    placeholder={placeholder}
-                    className="input-cixio"
-                  />
-                  {errors[name as keyof FormData] && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors[name as keyof FormData]?.message}
-                    </p>
-                  )}
-                </div>
-              ))}
+        <AuthTextField
+          id="register-phone"
+          label="Phone (optional)"
+          type="tel"
+          placeholder="+91 98765 43210"
+          autoComplete="tel"
+          error={errors.phone?.message}
+          registration={register("phone")}
+        />
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  <p className="text-red-600 text-sm">{error}</p>
-                </div>
-              )}
+        <AuthTextField
+          id="register-password"
+          label="Password"
+          type="password"
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          error={errors.password?.message}
+          registration={register("password")}
+        />
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn-cixio w-full mt-2"
-              >
-                {isSubmitting ? "Creating account…" : "Create account"}
-              </button>
-            </form>
+        <AuthTextField
+          id="register-confirm-password"
+          label="Confirm password"
+          type="password"
+          placeholder="Re-enter your password"
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          registration={register("confirmPassword")}
+        />
 
-            <p className="text-center text-sm mt-5 text-gray-500">
-              Already have an account?{" "}
-              <Link href="/login" className="text-cixio-blue font-medium hover:text-cixio-navy transition-colors">
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+        <button type="submit" disabled={isSubmitting} className="btn-cixio flex w-full items-center justify-center gap-2">
+          {isSubmitting ? (
+            <>
+              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+              Creating account...
+            </>
+          ) : (
+            <>
+              <UserPlus size={18} aria-hidden="true" />
+              Create account
+            </>
+          )}
+        </button>
+      </form>
+    </AuthShell>
   );
 }
