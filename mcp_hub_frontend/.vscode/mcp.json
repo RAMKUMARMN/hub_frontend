@@ -3,8 +3,8 @@
     "hub-frontend-mcp": {
       "type": "stdio",
       "command": "node",
-      "args": ["./dist/server.js"],
-      "cwd": "${workspaceFolder}"
+      "args": ["dist/server.js"],
+      "cwd": "."
     }
   }
 }
