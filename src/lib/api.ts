@@ -1,7 +1,9 @@
-import axios from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/authStore";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+type RetriableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
@@ -13,8 +15,8 @@ const api = axios.create({
 
 // Request interceptor — attach access token
 api.interceptors.request.use((config) => {
-  // Get token from Zustand store, not localStorage
-  const token = useAuthStore.getState().accessToken;
+  const token = useAuthStore.getState().accessToken
+    ?? (typeof window !== "undefined" ? localStorage.getItem("access_token") : null);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,9 +26,9 @@ api.interceptors.request.use((config) => {
 // Response interceptor — refresh token on 401
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+  async (error: AxiosError) => {
+    const original = error.config as RetriableRequestConfig | undefined;
+    if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true;
       const refreshToken = typeof window !== "undefined"
         ? localStorage.getItem("refresh_token")
