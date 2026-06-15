@@ -1,0 +1,10 @@
+[
+  {
+    "run": "case \"$*\" in *\"cat .env.local\"*|*\"less .env.local\"*|*\"head .env.local\"*|*\"tail .env.local\"*) echo 'BLOCKED: Reading .env.local directly — use grep on specific keys'; exit 1;; esac",
+    "description": "Block direct reads of .env.local to prevent secret exposure"
+  },
+  {
+    "run": "if [[ \"$*\" == \"git push origin main\" && -z \"${CI:-}\" ]]; then echo 'BLOCKED: Direct push to main outside CI. Open a PR instead.'; exit 1; fi",
+    "description": "Prevent direct pushes to main outside CI"
+  }
+]

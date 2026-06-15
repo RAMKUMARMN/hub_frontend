@@ -1,6 +1,15 @@
 ---
 name: "frontend-agent"
 description: "Describe what this custom agent does and when to use it."
+hooks:
+  PreSession:
+    - type: command
+      command: "if ! command -v node &>/dev/null; then echo 'ERROR: Node.js is not installed.'; exit 1; fi"
+    - type: command
+      command: "if [ ! -d node_modules ]; then echo 'WARNING: node_modules not found. Run: npm install'; fi"
+  PostCommand:
+    - type: command
+      command: "echo \"[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] exit=$1 | $2\" >> /tmp/frontend-agent.log"
 ---
 This custom "frontend agent" assists contributors and maintainers working in this repo with Next.js development, component design, and build tasks for the `hub_frontend` module. It acts as a focused, safety-first helper for authoring, reviewing, validating, and documenting changes to the frontend codebase.
 

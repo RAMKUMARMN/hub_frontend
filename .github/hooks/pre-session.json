@@ -1,0 +1,14 @@
+[
+  {
+    "run": "if ! command -v node &>/dev/null; then echo 'ERROR: Node.js is not installed. Install Node.js 18+ to work on hub_frontend.'; exit 1; fi",
+    "description": "Verify Node.js is installed"
+  },
+  {
+    "run": "if [ ! -d node_modules ]; then echo 'WARNING: node_modules not found. Run: npm install'; fi",
+    "description": "Check node_modules exists"
+  },
+  {
+    "run": "if [ ! -f .env.local ] && [ ! -f .env ]; then echo 'WARNING: No .env.local or .env found. Copy .env.example to .env.local if one exists.'; fi",
+    "description": "Check environment config file exists"
+  }
+]
