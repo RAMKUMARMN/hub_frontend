@@ -1,36 +1,43 @@
 "use client";
 
 /**
- * Chat session page — /chat/[sessionId]
+ * /chat/[sessionId] — Active chat session page
  *
- * Shows the message history for the session and a streaming input.
+ * Layout: ChatSidebar (left) | Chat area (right)
+ * Preserves all existing logic: RAG toggle, SSE with token, markdown rendering.
  *
- * TODO:
- *  1. Fetch message history via GET /api/v1/chat/sessions/{sessionId}/messages
- *  2. On send:
- *     a. Optimistically add user message to state
- *     b. Open EventSource to POST /api/v1/chat/sessions/{sessionId}/messages
- *     c. Append tokens to a streaming assistant message bubble
- *     d. On [DONE], finalise the message
- *  3. Render user messages on the right, assistant messages on the left
- *  4. Render Markdown in assistant messages (react-markdown + rehype-highlight)
+ * Place at: src/app/chat/[sessionId]/page.tsx
  */
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "@/lib/api";
-import type { ChatMessage } from "@/types";
+import type { ChatMessage, ChatSession } from "@/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
 import { useAuthStore } from "@/store/authStore";
+import ChatSidebar from "@/components/layout/ChatSidebar";
 
-interface Props {
-  params: { sessionId: string };
-}
+export default function ChatSessionPage() {
+  const { sessionId } = useParams<{ sessionId: string }>();
+  const router = useRouter();
 
-export default function ChatSessionPage({ params }: Props) {
-  const { sessionId } = params;
+  // ── Sidebar data ──────────────────────────────────────────
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ["sessions"],
+    queryFn: () =>
+      api.get<ChatSession[]>("/chat/sessions").then((r) => r.data),
+  });
+
+  const createSession = useMutation({
+    mutationFn: () =>
+      api.post<ChatSession>("/chat/sessions", { title: "New Chat" }),
+    onSuccess: (res) => router.push(`/chat/${res.data.id}`),
+  });
+
+  // ── Chat state (your existing logic, unchanged) ───────────
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -42,7 +49,9 @@ export default function ChatSessionPage({ params }: Props) {
   const { data: history } = useQuery({
     queryKey: ["messages", sessionId],
     queryFn: () =>
-      api.get<ChatMessage[]>(`/chat/sessions/${sessionId}/messages`).then((r) => r.data),
+      api
+        .get<ChatMessage[]>(`/chat/sessions/${sessionId}/messages`)
+        .then((r) => r.data),
   });
 
   useEffect(() => {
@@ -60,7 +69,6 @@ export default function ChatSessionPage({ params }: Props) {
     setIsSending(true);
     setStreamingContent("");
 
-    // Optimistically add user message
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       session_id: sessionId,
@@ -70,15 +78,6 @@ export default function ChatSessionPage({ params }: Props) {
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    // SSE streaming
-    // The POST request to initiate the stream should go through our secure api instance
-    // However, EventSource doesn't easily support custom headers for the initial POST.
-    // A common pattern is to use a standard fetch/axios POST to *initiate* the stream,
-    // and then connect EventSource. The backend should handle this.
-    // For now, we'll use EventSource directly as the README suggests, but with the token from Zustand.
-    // Note: EventSource doesn't support custom headers, so we'll pass the token as a query param.
-    // This requires a backend change to accept the token from a query parameter.
-    // A more secure alternative is to use fetch streaming instead of EventSource.
     const streamUrl = new URL(
       `chat/sessions/${sessionId}/messages/stream`,
       `${api.defaults.baseURL}/`
@@ -88,12 +87,11 @@ export default function ChatSessionPage({ params }: Props) {
     streamUrl.searchParams.set("content", content);
 
     const source = new EventSource(streamUrl.toString());
-
     let fullContent = "";
+
     source.onmessage = (event) => {
       if (event.data === "[DONE]") {
         source.close();
-        // Commit the full assistant message
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
           session_id: sessionId,
@@ -116,7 +114,6 @@ export default function ChatSessionPage({ params }: Props) {
     };
 
     source.onerror = () => {
-      // Handle error, maybe show a message to the user
       console.error("EventSource failed.");
       setStreamingContent(null);
       setIsSending(false);
@@ -124,77 +121,133 @@ export default function ChatSessionPage({ params }: Props) {
     };
   };
 
+  // ── Render ────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+    <div className="flex h-[calc(100vh-56px)] bg-[#f0f2f8]">
+
+      {/* ── Left sidebar ──────────────────────────────────── */}
+      <ChatSidebar
+        sessions={sessions ?? []}
+        isLoading={sessionsLoading}
+        activeSessionId={sessionId}
+        onNewChat={() => createSession.mutate()}
+        isCreating={createSession.isPending}
+      />
+
+      {/* ── Right: chat area ──────────────────────────────── */}
+      <div className="flex flex-1 flex-col overflow-hidden bg-white">
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+          {messages.length === 0 && streamingContent === null && (
+            <div className="flex h-full items-center justify-center text-sm text-gray-400">
+              Send a message to begin
+            </div>
+          )}
+
+          {messages.map((msg) => (
             <div
-              className={`max-w-[80%] rounded-xl px-4 py-2 ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                  {msg.content}
+              <div
+                className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-blue-600 text-white rounded-tr-sm"
+                    : "bg-gray-100 text-gray-900 rounded-tl-sm"
+                }`}
+              >
+                {msg.role === "assistant" ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    className="prose prose-sm max-w-none prose-p:my-1"
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Streaming bubble */}
+          {streamingContent !== null && (
+            <div className="flex justify-start">
+              <div className="max-w-[75%] rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm bg-gray-100 text-gray-900">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  className="prose prose-sm max-w-none prose-p:my-1"
+                >
+                  {streamingContent || "▋"}
                 </ReactMarkdown>
-              ) : (
-                <p>{msg.content}</p>
-              )}
+              </div>
             </div>
-          </div>
-        ))}
+          )}
 
-        {/* Streaming bubble */}
-        {streamingContent !== null && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-xl px-4 py-2 bg-gray-100 text-gray-900">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {streamingContent || "▋"}
-              </ReactMarkdown>
-            </div>
-          </div>
-        )}
+          <div ref={bottomRef} />
+        </div>
 
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t p-4 flex gap-2 items-end">
-        <div className="flex-1 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+        {/* Input bar */}
+        <div className="border-t border-gray-200 bg-white px-4 py-3">
+          {/* RAG toggle */}
+          <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
             <input
               type="checkbox"
               id="rag"
               checked={useRag}
               onChange={(e) => setUseRag(e.target.checked)}
+              className="accent-blue-600"
             />
-            <label htmlFor="rag">Use uploaded documents (RAG)</label>
+            <label htmlFor="rag" className="cursor-pointer select-none">
+              Use uploaded documents (RAG)
+            </label>
           </div>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Ask anything..."
-            rows={2}
-            className="border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+
+          {/* Textarea + send */}
+          <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2
+                          focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-200 transition-all">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Ask anything…"
+              rows={2}
+              className="flex-1 resize-none bg-transparent text-sm text-gray-800
+                         placeholder-gray-400 outline-none leading-relaxed max-h-40"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={isSending || !input.trim()}
+              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg
+                         bg-blue-600 hover:bg-blue-700 text-white
+                         disabled:opacity-40 disabled:cursor-not-allowed transition-colors mb-0.5"
+              aria-label="Send"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <button
-          onClick={sendMessage}
-          disabled={isSending || !input.trim()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 h-10"
-        >
-          Send
-        </button>
+
       </div>
     </div>
   );

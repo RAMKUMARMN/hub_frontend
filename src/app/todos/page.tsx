@@ -8,12 +8,12 @@ import type { Todo } from "@/types";
 export default function TodosPage() {
   const queryClient = useQueryClient();
   const [newTitle, setNewTitle] = useState("");
-
+//to fetch todo
   const { data: todos = [] } = useQuery({
     queryKey: ["todos"],
     queryFn: () => api.get<Todo[]>("/todos").then((r) => r.data),
   });
-
+//create todos
   const createMutation = useMutation({
     mutationFn: (title: string) => api.post<Todo>("/todos", { title }),
     onSuccess: () => {

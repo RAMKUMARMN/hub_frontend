@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -260,3 +259,4 @@ export default function ProfilePage() {
     </main>
   );
 }
+
