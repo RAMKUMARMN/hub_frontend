@@ -29,12 +29,7 @@ export default function ComponentTestPage() {
             <Select
               value={course}
               onChange={(e) => setCourse(e.target.value)}
-              options={[
-                "CSE",
-                "ECE",
-                "ME",
-                "CE",
-              ]}
+              options={["CSE", "ECE", "ME", "CE"]}
             />
           </div>
 
