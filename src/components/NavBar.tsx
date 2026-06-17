@@ -2,15 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
 const NAV_LINKS = [
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/chat", label: "Chat" },
   { href: "/documents", label: "Documents" },
   { href: "/todos", label: "Todos" },
   { href: "/queues", label: "Queues" },
-  { href: "/profile", label:"Profile"}
+  { href: "/profile", label: "Profile" },
+  { href: "/settings", label: "Settings" },
 ];
 
 const AUTH_PATHS = ["/login", "/register"];
@@ -30,8 +33,8 @@ export default function NavBar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-cixio-dark border-b border-cixio-navy/40 px-4 py-2 flex items-center justify-between shadow-lg">
       {/* Brand */}
-      <div className="flex items-center gap-6">
-        <Link href="/chat" className="flex items-center gap-2.5 flex-shrink-0">
+      <div className="flex min-w-0 items-center gap-4 lg:gap-6">
+        <Link href="/dashboard" className="flex items-center gap-2.5 flex-shrink-0">
           <Image
             src="/cixio-logo-white.png"
             alt="Cixio"
@@ -43,7 +46,7 @@ export default function NavBar() {
         </Link>
 
         {/* Nav links */}
-        <div className="hidden sm:flex gap-1">
+        <div className="hidden max-w-[58vw] gap-1 overflow-x-auto md:flex">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -73,9 +76,10 @@ export default function NavBar() {
         )}
         <button
           onClick={handleLogout}
-          className="text-sm text-cixio-light/60 hover:text-white font-medium border border-white/20 rounded-md px-3 py-1.5 hover:bg-white/10 transition"
+          className="inline-flex items-center gap-2 text-sm text-cixio-light/70 hover:text-white font-medium border border-white/20 rounded-md px-3 py-1.5 hover:bg-white/10 transition"
         >
-          Sign out
+          <LogOut size={16} aria-hidden="true" />
+          <span className="hidden sm:inline">Sign out</span>
         </button>
 
 
