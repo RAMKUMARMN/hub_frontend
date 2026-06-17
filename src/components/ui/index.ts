@@ -13,3 +13,8 @@ export { default as Spinner } from "./Spinner";
 export { default as Table } from "./Table";
 export { default as Tabs } from "./Tabs";
 export { default as TextArea } from "./TextArea";
+export { default as Tooltip } from "./Tooltip";
+export { default as Pagination } from "./Pagination";
+export { default as SearchBar } from "./SearchBar";
+export { default as Toast } from "./Toast";
+export { default as Skeleton } from "./Skeleton";
