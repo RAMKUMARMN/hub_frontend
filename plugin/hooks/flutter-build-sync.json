@@ -1,0 +1,19 @@
+{
+  "id": "cixio.fe.hooks.flutterSync",
+  "name": "Flutter Mobile Build Sync",
+  "event": "PostToolUse",
+  "action": {
+    "type": "shellExecution",
+    "command": "flutter",
+    "args": [
+      "pub",
+      "get"
+    ],
+    "options": {
+      "env": {
+        "TARGET_FILE": "${activeEditorFile}"
+      }
+    }
+  },
+  "timeout": 20000
+}

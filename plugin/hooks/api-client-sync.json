@@ -1,0 +1,18 @@
+{
+  "id": "cixio.fe.hooks.apiSync",
+  "name": "Frontend API Schema Sync",
+  "event": "PostToolUse",
+  "action": {
+    "type": "shellExecution",
+    "command": "node",
+    "args": [
+      "scripts/sync_api_types.js"
+    ],
+    "options": {
+      "env": {
+        "TARGET_FILE": "${activeEditorFile}"
+      }
+    }
+  },
+  "timeout": 10000
+}
