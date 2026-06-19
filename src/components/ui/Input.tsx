@@ -3,6 +3,7 @@ type InputProps = {
   placeholder?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  className?: string;
 };
 
 export default function Input({
@@ -10,6 +11,7 @@ export default function Input({
   placeholder,
   value,
   onChange,
+  className = "",
 }: InputProps) {
   return (
     <input
@@ -17,7 +19,7 @@ export default function Input({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className="input-cixio"
+      className={`input-cixio ${className}`}
     />
   );
 }
