@@ -1,0 +1,19 @@
+{
+  "id": "cixio.fe.hooks.lintSync",
+  "name": "Frontend Linter & Formatter Sync",
+  "event": "PostToolUse",
+  "action": {
+    "type": "shellExecution",
+    "command": "npm",
+    "args": [
+      "run",
+      "lint:fix"
+    ],
+    "options": {
+      "env": {
+        "TARGET_FILE": "${activeEditorFile}"
+      }
+    }
+  },
+  "timeout": 15000
+}
