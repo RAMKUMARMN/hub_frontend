@@ -22,6 +22,7 @@ import type { ChatMessage } from "@/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+// @ts-ignore: side-effect import without type declarations
 import "highlight.js/styles/github.css";
 import { useAuthStore } from "@/store/authStore";
 
@@ -70,55 +71,83 @@ export default function ChatSessionPage({ params }: Props) {
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    // SSE streaming
-    // The POST request to initiate the stream should go through our secure api instance
-    // However, EventSource doesn't easily support custom headers for the initial POST.
-    // A common pattern is to use a standard fetch/axios POST to *initiate* the stream,
-    // and then connect EventSource. The backend should handle this.
-    // For now, we'll use EventSource directly as the README suggests, but with the token from Zustand.
-    // Note: EventSource doesn't support custom headers, so we'll pass the token as a query param.
-    // This requires a backend change to accept the token from a query parameter.
-    // A more secure alternative is to use fetch streaming instead of EventSource.
-    const source = new EventSource(
-      `${API_URL}/api/v1/chat/sessions/${sessionId}/messages/stream?token=${accessToken}&use_rag=${useRag}&content=${encodeURIComponent(content)}`
-      `${api.defaults.baseURL}/chat/sessions/${sessionId}/messages/stream?token=${accessToken}&use_rag=${useRag}&content=${encodeURIComponent(content)}`
-    );
+    try {
+      const response = await fetch(
+        `${api.defaults.baseURL}/chat/sessions/${sessionId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            content,
+            use_rag: useRag,
+          }),
+        }
+      );
 
-    let fullContent = "";
-    source.onmessage = (event) => {
-      if (event.data === "[DONE]") {
-        source.close();
-        // Commit the full assistant message
-        const assistantMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          session_id: sessionId,
-          role: "assistant",
-          content: fullContent,
-          created_at: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-        setStreamingContent(null);
-        setIsSending(false);
-        return;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
-      try {
-        const { delta } = JSON.parse(event.data);
-        fullContent += delta;
-        setStreamingContent(fullContent);
-      } catch {
-        // ignore parse errors
-      }
-    };
 
-    source.onerror = () => {
-      // Handle error, maybe show a message to the user
-      console.error("EventSource failed.");
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+
+          const data = line.replace("data: ", "").trim();
+
+          if (data === "[DONE]") {
+            const assistantMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              session_id: sessionId,
+              role: "assistant",
+              content: fullContent,
+              created_at: new Date().toISOString(),
+            };
+
+            setMessages((prev) => [...prev, assistantMsg]);
+            setStreamingContent(null);
+            setIsSending(false);
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+
+            if (parsed.delta) {
+              fullContent += parsed.delta;
+              setStreamingContent(fullContent);
+            }
+          } catch {
+            // ignore malformed chunks
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
       setStreamingContent(null);
       setIsSending(false);
-      source.close();
-    };
+    }
   };
-
+    
   return (
     <div className="flex flex-col h-screen max-w-3xl mx-auto">
       {/* Messages */}
