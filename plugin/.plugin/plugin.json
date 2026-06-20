@@ -1,5 +1,59 @@
 {
-	"name": "plugin",
-	"version": "1.0.0",
-	"description": ""
+"repository": "hub_frontend",
+"repository_role": "web_client",
+"smart_hub": { "platform": "SmartHub", "managed": true, "management_repository": "hub_infra" },
+"name": "SmartHub Frontend Plugins",
+"version": "1.0.0",
+
+"repository_priority": 70,
+
+"mcp_server": {
+"name": "mcp_hub_frontend",
+"enabled": true,
+"auto_start": true,
+"is_controller": false
+},
+
+"orchestrator_registration": {
+"enabled": true,
+"managed_by": "hub_infra",
+"auto_discover": true,
+"allow_remote_reload": true,
+"allow_remote_validation": true
+},
+
+"plugin_root": "plugin",
+
+"supports": [
+"agents",
+"skills",
+"rules",
+"hooks"
+],
+
+"folders": {
+"agents": "agents",
+"skills": "skills",
+"rules": "rules",
+"hooks": "hooks"
+},
+
+"discovery": {
+"enabled": true,
+"recursive": true
+},
+
+"orchestration": {
+"enabled": true,
+"allow_agent_execution": true,
+"allow_skill_execution": true,
+"allow_hook_execution": true,
+"allow_rule_enforcement": true
+},
+
+"admin": {
+"allow_reload": true,
+"allow_enable_disable": true,
+"allow_validation": true
+}
 }

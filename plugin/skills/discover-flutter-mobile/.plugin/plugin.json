@@ -1,0 +1,10 @@
+{
+    "id": "discover-flutter-mobile",
+    "name": "discover-flutter-mobile",
+    "type": "skill",
+    "repository": "hub_frontend",
+    "enabled": true,
+    "version": "1.0.0",
+    "mcp_server": "",
+    "tool": ""
+}
