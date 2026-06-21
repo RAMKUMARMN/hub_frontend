@@ -17,14 +17,14 @@ const AUTH_PATHS = ["/login", "/register"];
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+ const { user, logout } = useAuthStore();
 
   if (AUTH_PATHS.some((p) => pathname.startsWith(p))) return null;
 
   const handleLogout = () => {
-    clearAuth();
-    router.push("/login");
-  };
+  logout();
+  window.location.href = "/login";
+};
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-cixio-dark border-b border-cixio-navy/40 px-4 py-2 flex items-center justify-between shadow-lg">

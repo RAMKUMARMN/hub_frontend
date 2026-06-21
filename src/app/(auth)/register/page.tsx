@@ -17,6 +17,7 @@ const schema = z
     phone: z.string().optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirm_password: z.string(),
+    otp: z.string().optional(),
   })
   .refine((d) => d.password === d.confirm_password, {
     message: "Passwords do not match",
@@ -29,35 +30,67 @@ export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [error, setError] = useState<string | null>(null);
+  const [otp, setOtp] = useState(""); 
+  
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [showOtpField, setShowOtpField] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (data: FormData) => {
+  const phoneValue = watch("phone");
+
+  const handleSendOtp = async () => {
+    if (!phoneValue) return setError("Please enter a phone number first.");
+    setIsVerifying(true);
     setError(null);
     try {
-      // Register
-      await api.post("/auth/register", {
+      await api.post("/auth/phone_number_verification", { phone: phoneValue });
+      setShowOtpField(true);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to send OTP");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerifyOtp = async (otpValue: string) => {
+    try {
+      await api.post("/auth/verify-phoneno-and-register", { 
+        phone: phoneValue, 
+        otp: otpValue 
+      });
+      setIsVerified(true);
+      setShowOtpField(false);
+      setValue("otp", otpValue);
+    } catch (err: any) {
+      const message = err.response?.data?.detail || "Invalid OTP";
+      setError(typeof message === 'string' ? message : JSON.stringify(message));
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    if (!isVerified) return setError("Please verify your phone number first.");
+    
+    setError(null);
+    try {
+      // 1. Register returns the tokens directly now
+      await api.post<TokenResponse>("/auth/register", {
         email: data.email,
         password: data.password,
         full_name: data.full_name,
-        phone: data.phone || undefined,
+        phone: data.phone,
+        otp: data.otp,
       });
 
-      // Auto-login
-      const tokenRes = await api.post<TokenResponse>("/auth/login", {
-        email: data.email,
-        password: data.password,
-      });
-      const { access_token, refresh_token } = tokenRes.data;
-      const userRes = await api.get<User>("/auth/me", {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      setAuth(userRes.data, access_token, refresh_token);
-      router.push("/chat");
+      // 2. Redirect to login page after successful registration
+      router.push("/login");
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
@@ -68,7 +101,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex bg-cixio-dark">
-      {/* Left panel */}
       <div className="hidden lg:flex flex-col items-center justify-center w-1/2 bg-gradient-to-br from-cixio-navy via-cixio-dark to-[#060F3A] p-12 relative overflow-hidden">
         <div className="absolute top-[-80px] left-[-80px] w-80 h-80 rounded-full bg-cixio-blue/20 blur-3xl" />
         <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 rounded-full bg-cixio-blue/15 blur-3xl" />
@@ -81,7 +113,6 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      {/* Right panel */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 bg-cixio-bg py-10">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 lg:hidden">
@@ -93,28 +124,44 @@ export default function RegisterPage() {
             <p className="text-sm text-gray-500 mb-6">Join CixioHub — TKM&apos;s AI platform</p>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {[
-                { label: "Full Name", name: "full_name", type: "text", placeholder: "John Doe" },
-                { label: "Email", name: "email", type: "email", placeholder: "you@tkmce.ac.in" },
-                { label: "Phone (optional)", name: "phone", type: "tel", placeholder: "+91 98765 43210" },
-                { label: "Password", name: "password", type: "password", placeholder: "••••••••" },
-                { label: "Confirm Password", name: "confirm_password", type: "password", placeholder: "••••••••" },
-              ].map(({ label, name, type, placeholder }) => (
-                <div key={name}>
-                  <label className="block text-sm font-semibold mb-1.5 text-gray-700">{label}</label>
-                  <input
-                    {...register(name as keyof FormData)}
-                    type={type}
-                    placeholder={placeholder}
-                    className="input-cixio"
-                  />
-                  {errors[name as keyof FormData] && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors[name as keyof FormData]?.message}
-                    </p>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700">Full Name</label>
+                <input {...register("full_name")} type="text" placeholder="John Doe" className="input-cixio" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700">Email</label>
+                <input {...register("email")} type="email" placeholder="you@tkmce.ac.in" className="input-cixio" />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700">Phone</label>
+                <div className="flex gap-2">
+                  <input {...register("phone")} type="tel" placeholder="+91 98765 43210" className="input-cixio" disabled={isVerified} />
+                  {!isVerified && (
+                    <button type="button" onClick={handleSendOtp} disabled={isVerifying} className="btn-cixio whitespace-nowrap text-sm">
+                      {isVerifying ? "Sending..." : "Verify"}
+                    </button>
                   )}
+                  {isVerified && <span className="text-green-600 font-bold flex items-center whitespace-nowrap">✓ Verified</span>}
                 </div>
-              ))}
+              </div>
+
+              {showOtpField && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-gray-700">Enter OTP</label>
+                  <input type="text" placeholder="Enter OTP" className="input-cixio" value={otp} onChange={(e) => setOtp(e.target.value)} />
+                  <button type="button" onClick={() => handleVerifyOtp(otp)} className="btn-cixio w-full mt-2">Confirm OTP</button>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700">Password</label>
+                <input {...register("password")} type="password" placeholder="••••••••" className="input-cixio" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700">Confirm Password</label>
+                <input {...register("confirm_password")} type="password" placeholder="••••••••" className="input-cixio" />
+              </div>
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -124,7 +171,7 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isVerified}
                 className="btn-cixio w-full mt-2"
               >
                 {isSubmitting ? "Creating account…" : "Create account"}
