@@ -1,0 +1,10 @@
+{
+    "id": "discover-file-uploads",
+    "name": "discover-file-uploads",
+    "type": "skill",
+    "repository": "hub_frontend",
+    "enabled": true,
+    "version": "1.0.0",
+    "mcp_server": "",
+    "tool": ""
+}
