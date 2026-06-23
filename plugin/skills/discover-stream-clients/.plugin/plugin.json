@@ -1,0 +1,10 @@
+{
+    "id": "discover-stream-clients",
+    "name": "discover-stream-clients",
+    "type": "skill",
+    "repository": "hub_frontend",
+    "enabled": true,
+    "version": "1.0.0",
+    "mcp_server": "",
+    "tool": ""
+}
