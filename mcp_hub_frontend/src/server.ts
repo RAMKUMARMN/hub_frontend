@@ -78,7 +78,9 @@ server.tool(
 server.tool(
   "find_feature_implementation",
   "Find feature implementation details",
-  {},
+  {
+    feature: z.string(),
+  },
   findFeatureImplementationHandler
 );
 

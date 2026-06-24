@@ -1,0 +1,10 @@
+{
+    "id": "trace-frontend-features",
+    "name": "trace-frontend-features",
+    "type": "skill",
+    "repository": "hub_frontend",
+    "enabled": true,
+    "version": "1.0.0",
+    "mcp_server": "mcp_hub_frontend",
+    "tool": "findFeature"
+}
