@@ -1,0 +1,10 @@
+{
+    "id": "trace-feature-implementation",
+    "name": "trace-feature-implementation",
+    "type": "skill",
+    "repository": "hub_frontend",
+    "enabled": true,
+    "version": "1.0.0",
+    "mcp_server": "mcp_hub_frontend",
+    "tool": "findFeatureImplementation"
+}
