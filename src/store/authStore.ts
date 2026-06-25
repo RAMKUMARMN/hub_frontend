@@ -5,6 +5,7 @@ import type { User } from "@/types";
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null; // ADD THIS
 
   setAuth: (
     user: User,
@@ -25,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       accessToken: null,
+      refreshToken: null, // INITIALIZE AS NULL
 
       setAuth: (user, accessToken, refreshToken) => {
         localStorage.setItem("access_token", accessToken);
@@ -33,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user,
           accessToken,
+          refreshToken, // SAVE TO STATE
         });
       },
 
@@ -42,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
 
         set({
           accessToken,
+          refreshToken, // SAVE TO STATE
         });
       },
 
@@ -52,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           accessToken: null,
+          refreshToken: null, // CLEAR FROM STATE
         });
       },
     }),
@@ -60,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken, // ENSURE IT PERSISTS
       }),
     }
   )
