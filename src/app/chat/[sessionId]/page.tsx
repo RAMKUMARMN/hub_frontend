@@ -16,15 +16,16 @@
  *  4. Render Markdown in assistant messages (react-markdown + rehype-highlight)
  */
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { ChatMessage } from "@/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-// @ts-ignore: side-effect import without type declarations
 import "highlight.js/styles/github.css";
 import { useAuthStore } from "@/store/authStore";
+import ChatSidebar from "@/components/chat-sidebar";
 
 interface Props {
   params: { sessionId: string };
@@ -32,6 +33,7 @@ interface Props {
 
 export default function ChatSessionPage({ params }: Props) {
   const { sessionId } = params;
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -39,6 +41,14 @@ export default function ChatSessionPage({ params }: Props) {
   const [isSending, setIsSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
+  type ChatSession = {
+  id: string;
+  title: string;
+};
+
+const [sessions, setSessions] = useState<ChatSession[]>([]);
+const currentSession = sessionId;
+  
 
   const { data: history } = useQuery({
     queryKey: ["messages", sessionId],
@@ -57,6 +67,23 @@ export default function ChatSessionPage({ params }: Props) {
   const sendMessage = async () => {
     if (!input.trim() || isSending) return;
     const content = input.trim();
+
+    if (messages.length === 0) {
+      try {
+        await api.patch(
+          `/chat/sessions/${sessionId}`,
+          {
+            title: content
+              .replace(/[?.!]/g, "")
+              .slice(0, 40),
+          }
+        );
+
+        fetchSessions();
+      } catch (err) {
+        console.error("Failed to update chat title", err);
+      }
+    }
     setInput("");
     setIsSending(true);
     setStreamingContent("");
@@ -70,6 +97,11 @@ export default function ChatSessionPage({ params }: Props) {
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
+
+    fetchSessions();
+
+    setStreamingContent(null);
+    setIsSending(false);
 
     try {
       const response = await fetch(
@@ -147,9 +179,55 @@ export default function ChatSessionPage({ params }: Props) {
       setIsSending(false);
     }
   };
+
+  const fetchSessions = async () => {
+  const response = await api.get("/chat/sessions");
+  setSessions(response.data);
+};
+
+  useEffect(() => {
+  fetchSessions();
+}, []);
+
+  const createNewChat = async () => {
+  const response = await api.post("/chat/sessions", {
+    title: "New Chat",
+  });
+
+  router.push(`/chat/${response.data.id}`);
+};
+
+const deleteChat = async (sessionId: string) => {
+  try {
+    await api.delete(`/chat/sessions/${sessionId}`);
+
+    const updated = sessions.filter(
+      (s) => s.id !== sessionId
+    );
+
+    setSessions(updated);
+
+    if (currentSession === sessionId) {
+      if (updated.length > 0) {
+        router.push(`/chat/${updated[0].id}`);
+      } else {
+        router.push("/chat");
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
     
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto">
+  <div className="flex h-screen">
+    <ChatSidebar
+  sessions={sessions}
+  currentSession={currentSession ?? ""}
+  onNewChat={createNewChat}
+  onDeleteChat={deleteChat}
+/>
+    <div className="flex flex-col flex-1 max-w-3xl mx-auto">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
@@ -221,5 +299,6 @@ export default function ChatSessionPage({ params }: Props) {
         </button>
       </div>
     </div>
+  </div>
   );
 }
