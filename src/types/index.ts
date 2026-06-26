@@ -1,3 +1,4 @@
+
 // Shared TypeScript types used across the frontend
 
 export interface User {
@@ -34,14 +35,40 @@ export interface Document {
   created_at: string;
 }
 
+// ---------------------------
+// Todo types
+// ---------------------------
+
+export type TodoPriority = "low" | "medium" | "high";
+
 export interface Todo {
   id: string;
+  user_id: string;
   title: string;
   description: string | null;
   completed: boolean;
   due_date: string | null;
+  priority: TodoPriority;
+  reminder_at: string | null;
+  reminder_sent: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreateTodoPayload {
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  priority?: TodoPriority;
+  reminder_at?: string | null;
+}
+
+export interface UpdateTodoPayload {
+  title?: string;
+  description?: string | null;
+  due_date?: string | null;
+  priority?: TodoPriority;
+  reminder_at?: string | null;
 }
 
 export interface TokenResponse {
@@ -59,3 +86,4 @@ export interface NotificationJob {
   retrying: number;
   completed: boolean;
 }
+
