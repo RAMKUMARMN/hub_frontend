@@ -123,7 +123,14 @@ export default function RegisterPage() {
 
   const handleVerifyOtp = async (otpValue: string) => {
     try {
+<<<<<<< HEAD
       await api.post("/auth/verify-phoneno-and-register", { phone: phoneValue, otp: otpValue });
+=======
+      await api.post("/auth/verify-registration-otp", { 
+        phone: phoneValue, 
+        otp: otpValue 
+      });
+>>>>>>> c2a2dcb (complete rag pipeline integration, new chat sidebar  and docker support)
       setIsVerified(true);
       setShowOtpField(false);
       setValue("otp", otpValue);
