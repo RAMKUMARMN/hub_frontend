@@ -3,7 +3,8 @@
 // Manage Accounts page at /admin/accounts
 // Full account details: view, edit role, suspend, delete
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import api, { buildApiUrl } from "@/lib/api";
 
 type Role    = "Admin" | "Engineer" | "Designer" | "Manager" | "Analyst" | "DevOps" | "Member";
 type AcctStatus = "active" | "suspended" | "inactive";
@@ -45,13 +46,73 @@ export default function ManageAccountsPage() {
   const [filter,   setFilter]   = useState<AcctStatus | "all">("all");
   const [selected, setSelected] = useState<Account | null>(null); // detail drawer
 
-  function updateAccount(id: string, patch: Partial<Account>) {
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const res = await api.get(buildApiUrl("/admin/users"));
+        const users = res.data as Array<{
+          id: string;
+          full_name: string;
+          email: string;
+          avatar_url?: string | null;
+          is_admin?: boolean;
+          created_at?: string;
+        }>;
+
+        const mapped: Account[] = users.map((user) => ({
+          id: user.id,
+          name: user.full_name || user.email,
+          email: user.email,
+          role: (user.is_admin ? "Admin" : "Member") as Role,
+          status: "active" as AcctStatus,
+          joined: user.created_at ? new Date(user.created_at).toISOString().slice(0, 10) : "",
+          lastSeen: "Recently updated",
+          tasks: 0,
+          notes: 0,
+          storage: "—",
+          avatar: (user.full_name || user.email).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
+        }));
+
+        setAccounts(mapped);
+      } catch (error) {
+        console.error("Failed to load accounts", error);
+      }
+    };
+
+    loadAccounts();
+  }, []);
+
+  async function updateAccount(id: string, patch: Partial<Account>) {
+    try {
+      const body: Record<string, unknown> = {};
+      if (patch.status) {
+        body.status = patch.status;
+        body.is_active = patch.status === "active";
+      }
+      if (patch.role === "Admin") {
+        body.is_admin = true;
+      } else if (patch.role === "Member") {
+        body.is_admin = false;
+      }
+      await api.patch(buildApiUrl(`/admin/users/${id}`), body);
+    } catch (error) {
+      console.error("Failed to update account", error);
+      return;
+    }
+
     setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
     if (selected?.id === id) setSelected((prev) => prev ? { ...prev, ...patch } : prev);
   }
 
-  function deleteAccount(id: string) {
+  async function deleteAccount(id: string) {
     if (!confirm("Permanently delete this account?")) return;
+    try {
+      await api.delete(buildApiUrl(`/admin/users/${id}`));
+    } catch (error) {
+      console.error("Failed to delete account", error);
+      return;
+    }
+
     setAccounts((prev) => prev.filter((a) => a.id !== id));
     if (selected?.id === id) setSelected(null);
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import api, { buildApiUrl } from "@/lib/api";
 
 type Props = {
   currentPhotoUrl?: string | null;   // existing photo from the database, if any
@@ -47,15 +48,8 @@ export default function AvatarUpload({ currentPhotoUrl, userInitials }: Props) {
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/profile/avatar", {
-        method: "POST",
-        body: formData, // NOTE: don't set Content-Type header — browser does it automatically for FormData
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-
-      const data = await res.json();
-      setPreviewUrl(data.url); // replace local preview with the real saved URL
+      const res = await api.post(buildApiUrl("/auth/avatar"), formData);
+      setPreviewUrl(res.data.avatar_url ?? null); // replace local preview with the real saved URL
     } catch (err) {
       alert("Upload failed, please try again");
       setPreviewUrl(currentPhotoUrl ?? null); // revert on failure
@@ -70,8 +64,7 @@ export default function AvatarUpload({ currentPhotoUrl, userInitials }: Props) {
     setPreviewUrl(null);
 
     try {
-      const res = await fetch("/api/profile/avatar", { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove avatar");
+      await api.delete(buildApiUrl("/auth/avatar"));
     } catch (err) {
       alert("Could not remove avatar on server");
       setPreviewUrl(prev);

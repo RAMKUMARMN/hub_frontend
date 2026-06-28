@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import api from "@/lib/api";
+import api, { buildApiUrl } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import type { TokenResponse, User } from "@/types";
 
@@ -32,13 +32,13 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     setError(null);
     try {
-      const tokenRes = await api.post<TokenResponse>("/auth/login", data);
+      const tokenRes = await api.post<TokenResponse>(buildApiUrl("/auth/login"), data);
       const { access_token, refresh_token } = tokenRes.data;
 
       setTokens(access_token, refresh_token);
 
       // Fetch current user profile
-      const userRes = await api.get<User>("/auth/me");
+      const userRes = await api.get<User>(buildApiUrl("/auth/me"));
 
       setAuth(userRes.data, access_token, refresh_token);
       router.push("/dashboard");

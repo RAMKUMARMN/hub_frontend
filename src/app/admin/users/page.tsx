@@ -3,7 +3,8 @@
 // User Approval Page at /admin/users
 // Admins can approve or reject pending user registrations
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import api, { buildApiUrl } from "@/lib/api";
 
 type UserStatus = "pending" | "approved" | "rejected";
 
@@ -38,16 +39,62 @@ export default function AdminUsersPage() {
   const [filter, setFilter] = useState<UserStatus | "all">("all");
   const [search, setSearch] = useState("");
 
-  // Update one user's status
-  function setStatus(id: string, status: UserStatus) {
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await api.get(buildApiUrl("/admin/pending-users"));
+        const payload = res.data as Array<{
+          id: string;
+          full_name: string;
+          email: string;
+          created_at?: string;
+        }>;
+
+        const mapped = payload.map((user) => ({
+          id: user.id,
+          name: user.full_name || user.email,
+          email: user.email,
+          role: "Member",
+          requestedAt: user.created_at || new Date().toISOString(),
+          status: "pending" as UserStatus,
+          avatar: (user.full_name || user.email).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
+        }));
+        setUsers(mapped);
+      } catch (error) {
+        console.error("Failed to load pending users", error);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  async function setStatus(id: string, status: UserStatus) {
+    try {
+      if (status === "approved") {
+        await api.patch(buildApiUrl(`/admin/approve/${id}`));
+      } else if (status === "rejected") {
+        await api.patch(buildApiUrl(`/admin/users/${id}`), { status: "rejected" });
+      } else {
+        await api.patch(buildApiUrl(`/admin/users/${id}`), { status: "pending" });
+      }
+    } catch (error) {
+      console.error("Failed to update user status", error);
+      return;
+    }
+
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
   }
 
-  // Bulk approve all pending
-  function approveAll() {
-    setUsers((prev) =>
-      prev.map((u) => (u.status === "pending" ? { ...u, status: "approved" } : u))
-    );
+  async function approveAll() {
+    const pendingUsers = users.filter((u) => u.status === "pending");
+    try {
+      await Promise.all(pendingUsers.map((u) => api.patch(buildApiUrl(`/admin/approve/${u.id}`))));
+    } catch (error) {
+      console.error("Failed to approve pending users", error);
+      return;
+    }
+
+    setUsers((prev) => prev.map((u) => (u.status === "pending" ? { ...u, status: "approved" } : u)));
   }
 
   // Filtered list

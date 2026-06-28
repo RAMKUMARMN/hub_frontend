@@ -4,11 +4,13 @@
 // Admins upload a CSV file to bulk approve users
 
 import { useState, useRef } from "react";
+import api, { buildApiUrl } from "@/lib/api";
 
 type ParsedUser = {
-  name:  string;
+  full_name: string;
   email: string;
-  role:  string;
+  phone: string;
+  role: string;
   valid: boolean;
   error?: string;
 };
@@ -21,17 +23,22 @@ function isValidEmail(email: string) {
 // Parse CSV text into rows
 // Expected columns: name, email, role (header row required)
 function parseCSV(text: string): ParsedUser[] {
-  const lines = text.trim().split("\n").map((l) => l.trim());
+  const lines = text.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (lines.length < 2) return [];
 
-  // Skip header row (line 0)
+  const headers = lines[0].split(",").map((c) => c.trim().toLowerCase());
   return lines.slice(1).map((line) => {
-    const [name = "", email = "", role = ""] = line.split(",").map((c) => c.trim());
+    const cells = line.split(",").map((c) => c.trim());
+    const values = Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
+    const full_name = values.full_name || values.name || "";
+    const email = values.email || "";
+    const phone = values.phone || "";
+    const role = values.role || "Member";
 
-    if (!name) return { name, email, role, valid: false, error: "Name is missing" };
-    if (!isValidEmail(email)) return { name, email, role, valid: false, error: "Invalid email" };
+    if (!full_name) return { full_name, email, phone, role, valid: false, error: "Name is missing" };
+    if (!isValidEmail(email)) return { full_name, email, phone, role, valid: false, error: "Invalid email" };
 
-    return { name, email, role: role || "Member", valid: true };
+    return { full_name, email, phone, role, valid: true };
   });
 }
 
@@ -75,22 +82,24 @@ export default function CSVUploadPage() {
     if (file) processFile(file);
   }
 
-  // Mock bulk upload
   async function handleUpload() {
     const validUsers = users.filter((u) => u.valid);
     if (validUsers.length === 0) return;
 
     setStatus("uploading");
 
-    // TODO: replace with real API call
-    // await fetch("/api/admin/users/bulk", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({ users: validUsers }),
-    // });
+    try {
+      const file = fileRef.current?.files?.[0];
+      if (!file) throw new Error("No file selected");
 
-    await new Promise((r) => setTimeout(r, 1500)); // simulate network delay
-    setStatus("done");
+      const formData = new FormData();
+      formData.append("file", file);
+      await api.post(buildApiUrl("/admin/users/bulk"), formData);
+      setStatus("done");
+    } catch (error) {
+      console.error(error);
+      setStatus("error");
+    }
   }
 
   function reset() {
@@ -206,7 +215,7 @@ export default function CSVUploadPage() {
                   {users.map((u, i) => (
                     <tr key={i} className={`border-b border-gray-50 last:border-0 ${!u.valid ? "bg-red-50" : ""}`}>
                       <td className="px-5 py-3 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="px-5 py-3 text-gray-700">{u.name || <span className="text-gray-300">—</span>}</td>
+                      <td className="px-5 py-3 text-gray-700">{u.full_name || <span className="text-gray-300">—</span>}</td>
                       <td className="px-5 py-3 text-gray-600">{u.email}</td>
                       <td className="px-5 py-3 text-gray-500">{u.role}</td>
                       <td className="px-5 py-3">
