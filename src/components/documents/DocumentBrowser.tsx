@@ -52,12 +52,35 @@ function fileIcon(type: string) {
 
 // ─── Fetch hooks ─────────────────────────────────────────────────────────────
 
+const MIME_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  txt: "text/plain",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+};
+
+function mapToMimeType(fileType: string): string {
+  return MIME_TYPES[fileType.toLowerCase()] || "application/octet-stream";
+}
+
+// ─── Fetch hooks ─────────────────────────────────────────────────────────────
+
 function useDocs(initialData?: Doc[]) {
   return useQuery<Doc[]>({
     queryKey: ["documents"],
     queryFn: async () => {
-      const res = await api.get<Doc[]>("/documents");
-      return res.data;
+      const res = await api.get<any[]>("/documents");
+      return res.data.map((d) => ({
+        id: d.id,
+        name: d.filename || "Unknown",
+        size: d.file_size || 0,
+        type: mapToMimeType(d.file_type),
+        url: `/documents/${d.id}/download`,
+        created_at: d.created_at,
+        updated_at: d.created_at,
+      }));
     },
     initialData,
   });
@@ -131,6 +154,25 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
       qc.invalidateQueries({ queryKey: ["documents"] });
     },
   });
+
+  async function downloadFile(doc: Doc) {
+    try {
+      const res = await api.get(`/documents/${doc.id}/download`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", doc.name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download file:", err);
+      alert("Failed to download file");
+    }
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -390,13 +432,11 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
                       className="text-xs text-gray-500 hover:text-cixio-blue"
                       title="Rename"
                     >✏️</button>
-                    <a
-                      href={doc.url}
-                      download={doc.name}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-gray-500 hover:text-cixio-blue"
+                    <button
+                      onClick={(e) => { e.stopPropagation(); downloadFile(doc); }}
+                      className="text-xs text-gray-500 hover:text-cixio-blue cursor-pointer select-none"
                       title="Download"
-                    >⬇️</a>
+                    >⬇️</button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteId(doc.id); }}
                       className="text-xs text-gray-500 hover:text-red-500"
@@ -462,13 +502,11 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
                             className="text-gray-400 hover:text-cixio-blue transition"
                             title="Rename"
                           >✏️</button>
-                          <a
-                            href={doc.url}
-                            download={doc.name}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-gray-400 hover:text-cixio-blue transition"
-                            title="Download"
-                          >⬇️</a>
+                           <button
+                             onClick={(e) => { e.stopPropagation(); downloadFile(doc); }}
+                             className="text-gray-400 hover:text-cixio-blue transition cursor-pointer select-none"
+                             title="Download"
+                           >⬇️</button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeleteId(doc.id); }}
                             className="text-gray-400 hover:text-red-500 transition"
@@ -536,13 +574,12 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
 
                 {/* Actions */}
                 <div className="mt-4 flex gap-2">
-                  <a
-                    href={preview.url}
-                    download={preview.name}
-                    className="flex-1 text-center text-xs font-medium bg-cixio-blue text-white rounded-lg py-2 hover:bg-cixio-hover transition"
-                  >
-                    Download
-                  </a>
+                   <button
+                     onClick={() => downloadFile(preview)}
+                     className="flex-1 text-center text-xs font-medium bg-cixio-blue hover:bg-cixio-hover text-white rounded-lg py-2 transition cursor-pointer select-none"
+                   >
+                     Download
+                   </button>
                   <button
                     onClick={() => { setDeleteId(preview.id); setPreview(null); }}
                     className="text-xs text-red-500 border border-red-100 rounded-lg px-3 py-2 hover:bg-red-50 transition"

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        const chunk = `data: ${words[i]} \n\n`;
+        const chunk = `data: ${JSON.stringify({ delta: words[i] + ' ' })}\n\n`;
         controller.enqueue(encoder.encode(chunk));
         i += 1;
       }, 40);

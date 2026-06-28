@@ -53,3 +53,101 @@ body {
            transition text-sm;
   }
 }
+
+/* Custom basic styling for Markdown elements inside chat messages (.prose) */
+.prose ul {
+  list-style-type: disc !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1.5rem !important;
+}
+.prose ul ul {
+  list-style-type: circle !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  padding-left: 1.25rem !important;
+}
+.prose ol {
+  list-style-type: decimal !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1.5rem !important;
+}
+.prose li {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  display: list-item !important;
+}
+.prose p {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+.prose h1, .prose h2, .prose h3 {
+  font-weight: 700 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+  color: inherit !important;
+}
+.prose h1 { font-size: 1.25rem !important; }
+.prose h2 { font-size: 1.125rem !important; }
+.prose h3 { font-size: 1rem !important; }
+.prose blockquote {
+  border-left: 4px solid var(--cixio-muted) !important;
+  padding-left: 1rem !important;
+  font-style: italic !important;
+  margin: 0.5rem 0 !important;
+}
+.prose pre {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  padding: 0.75rem !important;
+  border-radius: 0.5rem !important;
+  overflow-x: auto !important;
+  margin: 0.75rem 0 !important;
+}
+.prose code {
+  font-family: monospace !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  padding: 0.125rem 0.25rem !important;
+  border-radius: 0.25rem !important;
+}
+.dark .prose code {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Custom premium styling for Markdown tables (.prose) */
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+  font-size: 0.825rem !important;
+}
+.prose th {
+  background-color: rgba(18, 89, 251, 0.08) !important;
+  color: var(--cixio-dark) !important;
+  font-weight: 600 !important;
+  padding: 0.5rem 0.75rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  text-align: left !important;
+}
+.dark .prose th {
+  background-color: rgba(18, 89, 251, 0.15) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.prose td {
+  padding: 0.5rem 0.75rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: inherit !important;
+  text-align: left !important;
+}
+.dark .prose td {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.prose tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+.dark .prose tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
