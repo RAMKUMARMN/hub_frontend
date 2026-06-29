@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-
+import { Toaster, toast } from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
 import { connectWebSocket } from "@/lib/websocket";
 
@@ -26,8 +26,13 @@ export default function Providers({
   }, [user?.id]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  <QueryClientProvider client={queryClient}>
+    {children}
+
+    <Toaster
+      position="top-right"
+      reverseOrder={false}
+    />
+  </QueryClientProvider>
+);
 }

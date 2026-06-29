@@ -36,6 +36,7 @@ export default function TodosPage() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [sort, setSort] = useState<SortType>("deadline");
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     void loadTodos();
@@ -269,6 +270,41 @@ export default function TodosPage() {
     });
   }, [todos, filter, sort]);
 
+  const calendarDays = useMemo(() => {
+  const today = new Date();
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    return date;
+  });
+}, []);
+
+const selectedDayTodos = useMemo(() => {
+  return visibleTodos.filter((todo) => {
+    if (!todo.due_date) return false;
+
+    const due = new Date(todo.due_date);
+
+    return (
+      due.getFullYear() === selectedDate.getFullYear() &&
+      due.getMonth() === selectedDate.getMonth() &&
+      due.getDate() === selectedDate.getDate()
+    );
+  });
+}, [visibleTodos, selectedDate]);
+
+const completedToday = selectedDayTodos.filter(
+  (todo) => todo.completed
+).length;
+
+const progress =
+  selectedDayTodos.length === 0
+    ? 0
+    : Math.round(
+        (completedToday / selectedDayTodos.length) * 100
+      );
+
   return (
     <main className="min-h-screen bg-[#f4f6fc] px-4 py-8 sm:px-6 lg:px-8">
       <section className="mx-auto w-full max-w-6xl">
@@ -278,6 +314,61 @@ export default function TodosPage() {
             Organize your work, manage deadlines, and track progress.
           </p>
         </header>
+
+  <div className="mb-8 overflow-x-auto">
+  <div className="flex gap-3 pb-2">
+    {calendarDays.map((day) => {
+      const isSelected =
+        day.toDateString() === selectedDate.toDateString();
+
+      return (
+        <button
+          key={day.toISOString()}
+          onClick={() => setSelectedDate(day)}
+          className={`min-w-[70px] rounded-2xl border p-3 transition ${
+            isSelected
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <p className="text-xs font-medium">
+            {day.toLocaleDateString("en-US", {
+              weekday: "short",
+            })}
+          </p>
+
+          <p className="mt-1 text-2xl font-bold">
+            {day.getDate()}
+          </p>
+        </button>
+      );
+    })}
+  </div>
+</div>
+<div className="mb-8 rounded-3xl bg-blue-600 p-6 text-white shadow-lg">
+  <p className="text-sm font-medium text-blue-100">
+    Daily Progress
+  </p>
+
+  <h2 className="mt-2 text-2xl font-bold">
+    Keep pushing forward!
+  </h2>
+
+  <p className="mt-1 text-blue-100">
+    {completedToday} of {selectedDayTodos.length} tasks completed
+  </p>
+
+  <div className="mt-5 h-3 w-full rounded-full bg-blue-400">
+    <div
+      className="h-3 rounded-full bg-white transition-all duration-500"
+      style={{ width: `${progress}%` }}
+    />
+  </div>
+
+  <p className="mt-3 text-right text-lg font-semibold">
+    {progress}%
+  </p>
+</div>
 
         <form
           onSubmit={createTodo}
@@ -301,70 +392,80 @@ export default function TodosPage() {
               className="rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
 
-            <input
-              type="datetime-local"
-              value={createForm.due_date}
-              onChange={(event) =>
-                setCreateForm((current) => ({
-                  ...current,
-                  due_date: event.target.value,
-                }))
-              }
-              className="rounded-xl border border-slate-300 px-4 py-3 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
+        <input
+          type={createForm.due_date ? "datetime-local" : "text"}
+          placeholder="Due Date"
+          value={createForm.due_date}
+          onFocus={(e) => (e.target.type = "datetime-local")}
+          onBlur={(e) => {
+            if (!createForm.due_date) e.target.type = "text";
+          }}
+          onChange={(event) =>
+            setCreateForm((current) => ({
+              ...current,
+              due_date: event.target.value,
+            }))
+          }
+          className="rounded-xl border border-slate-300 px-4 py-3 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <select
-              value={createForm.priority}
-              onChange={(event) =>
-                setCreateForm((current) => ({
-                  ...current,
-                  priority: event.target.value as TodoPriority,
-                }))
-              }
-              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="low">Low priority</option>
-              <option value="medium">Medium priority</option>
-              <option value="high">High priority</option>
-            </select>
-
-            <input
-              type="datetime-local"
-              value={createForm.reminder_at}
-              onChange={(event) =>
-                setCreateForm((current) => ({
-                  ...current,
-                  reminder_at: event.target.value,
-                }))
-              }
-              className="rounded-xl border border-slate-300 px-4 py-3 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <textarea
-            value={createForm.description}
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <select
+            value={createForm.priority}
             onChange={(event) =>
               setCreateForm((current) => ({
                 ...current,
-                description: event.target.value,
+                priority: event.target.value as TodoPriority,
               }))
             }
-            placeholder="Description (optional)..."
-            rows={3}
-            className="mt-3 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
+            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="low">Low priority</option>
+            <option value="medium">Medium priority</option>
+            <option value="high">High priority</option>
+          </select>
 
-          <div className="mt-3 flex justify-end">
-            <button
-              type="submit"
-              disabled={creating}
-              className="rounded-xl bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {creating ? "Adding..." : "Add task"}
-            </button>
-          </div>
+          <input
+            type={createForm.reminder_at ? "datetime-local" : "text"}
+            placeholder="Set Reminder"
+            value={createForm.reminder_at}
+            onFocus={(e) => (e.target.type = "datetime-local")}
+            onBlur={(e) => {
+              if (!createForm.reminder_at) e.target.type = "text";
+            }}
+            onChange={(event) =>
+              setCreateForm((current) => ({
+                ...current,
+                reminder_at: event.target.value,
+              }))
+            }
+            className="rounded-xl border border-slate-300 px-4 py-3 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+
+        <textarea
+          value={createForm.description}
+          onChange={(event) =>
+            setCreateForm((current) => ({
+              ...current,
+              description: event.target.value,
+            }))
+          }
+          placeholder="Description (optional)..."
+          rows={3}
+          className="mt-3 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+
+        <div className="mt-3 flex justify-end">
+          <button
+            type="submit"
+            disabled={creating}
+            className="rounded-xl bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {creating ? "Adding..." : "Add task"}
+          </button>
+        </div>
         </form>
 
         {error && (
@@ -418,10 +519,10 @@ export default function TodosPage() {
           <div className="rounded-2xl bg-white p-10 text-center text-slate-500 shadow-sm">
             Loading your tasks...
           </div>
-        ) : visibleTodos.length === 0 ? (
+        ) : selectedDayTodos.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
             <p className="text-lg font-semibold text-slate-700">
-              No tasks found
+              No tasks scheduled for this day
             </p>
             <p className="mt-2 text-sm text-slate-500">
               Create a task or choose a different filter.
@@ -429,7 +530,7 @@ export default function TodosPage() {
           </div>
         ) : (
           <section className="space-y-3">
-            {visibleTodos.map((todo) => {
+            {selectedDayTodos.map((todo) => {
               const isEditing = editingTodoId === todo.id;
               const isSaving = updatingTodoId === todo.id;
               const status = getTodoStatus(todo);
