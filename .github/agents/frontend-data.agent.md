@@ -1,6 +1,7 @@
 ---
 name: frontend-data
 description: "Single-task agent for API integration, TanStack React Query hooks, Zustand stores, and Axios configuration. Does NOT handle pages, UI components, or CI workflows."
+tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Frontend Data Agent

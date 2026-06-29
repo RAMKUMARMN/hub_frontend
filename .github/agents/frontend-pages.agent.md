@@ -1,6 +1,7 @@
 ---
 name: frontend-pages
 description: "Single-task agent for creating and updating Next.js App Router pages and layouts in src/app/. Does NOT handle reusable components, API integration, or CI workflows."
+tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Frontend Pages Agent

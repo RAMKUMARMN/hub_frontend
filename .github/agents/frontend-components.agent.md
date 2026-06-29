@@ -1,6 +1,7 @@
 ---
 name: frontend-components
 description: "Single-task agent for creating and updating reusable UI components in src/components/. Includes shadcn/ui primitives, feature components, styling, and Tailwind CSS. Does NOT handle pages, API integration, or CI workflows."
+tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Frontend Components Agent

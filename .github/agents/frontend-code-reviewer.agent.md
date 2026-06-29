@@ -1,6 +1,7 @@
 ---
 name: frontend-code-reviewer
 description: "Code reviewer for hub_frontend: reviews pages, components, API hooks, and stores for correctness, performance, accessibility, and best practices. Does NOT implement code."
+tools: Read, Glob, Grep
 ---
 
 # Frontend Code Reviewer Agent

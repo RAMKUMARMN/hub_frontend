@@ -1,6 +1,7 @@
 ---
 name: frontend-ci
 description: "Single-task agent for creating and updating GitHub Actions CI workflows for frontend linting, type checking, building, and testing. Does NOT handle pages, components, or API integration."
+tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Frontend CI Agent

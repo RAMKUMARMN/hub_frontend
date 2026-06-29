@@ -1,6 +1,7 @@
 ---
 name: frontend-planner
 description: "Implementation planner for hub_frontend: generates structured plans for new pages, components, data integration, or refactoring. Does NOT implement code."
+tools: Read, Glob, Grep, WebSearch
 ---
 
 # Frontend Planner Agent
