@@ -5,7 +5,7 @@ import NewChatButton from "@/components/chat/newchatbutton";
 async function getLatestSessionId(): Promise<string | null> {
   try {
     const token = (await cookies()).get("access_token")?.value;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/sessions`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/sessions`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       cache: "no-store",
     });

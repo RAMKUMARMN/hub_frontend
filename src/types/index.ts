@@ -23,6 +23,9 @@ export interface ChatMessage {
   session_id: string;
   role: "user" | "assistant";
   content: string;
+  thinking?: string;
+  thinking_enabled?: boolean;
+  sources?: { filename: string; text: string }[];
   created_at: string;
 }
 

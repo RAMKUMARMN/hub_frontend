@@ -5,16 +5,6 @@ import { ChatSession, ChatMessage } from "@/types";
 const LOCAL_SESSIONS_KEY = "cixio_chat_sessions";
 const BACKEND_AVAILABLE_KEY = "cixio_chat_backend_available";
 
-function getBackendAvailable(): boolean {
-  if (typeof window === "undefined") return true;
-  return localStorage.getItem(BACKEND_AVAILABLE_KEY) !== "false";
-}
-
-function setBackendAvailable(value: boolean) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(BACKEND_AVAILABLE_KEY, String(value));
-}
-
 function loadLocalSessions(): ChatSession[] {
   if (typeof window === "undefined") return [];
   try {
@@ -71,16 +61,11 @@ export function useSessions() {
   return useQuery<ChatSession[]>({
     queryKey: ["chat-sessions"],
     queryFn: async () => {
-      if (!getBackendAvailable()) {
-        return loadLocalSessions();
-      }
-
       try {
         const res = await api.get("/chat/sessions");
-        setBackendAvailable(true);
         return res.data;
-      } catch {
-        setBackendAvailable(false);
+      } catch (err) {
+        console.warn("Backend /chat/sessions failed, falling back to local sessions:", err);
         return loadLocalSessions();
       }
     },
@@ -92,20 +77,11 @@ export function useCreateSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      if (!getBackendAvailable()) {
-        const session = createLocalSession();
-        const sessions = loadLocalSessions();
-        const nextSessions = [...sessions, session];
-        saveLocalSessions(nextSessions);
-        return session;
-      }
-
       try {
         const res = await api.post("/chat/sessions", {});
-        setBackendAvailable(true);
         return res.data as ChatSession;
-      } catch {
-        setBackendAvailable(false);
+      } catch (err) {
+        console.warn("Backend POST /chat/sessions failed, falling back to local session:", err);
         const session = createLocalSession();
         const sessions = loadLocalSessions();
         const nextSessions = [...sessions, session];
@@ -125,15 +101,11 @@ export function useMessages(sessionId: string | null) {
     queryKey: ["chat-messages", sessionId],
     queryFn: async () => {
       if (!sessionId) return [];
-      if (!getBackendAvailable()) {
-        return loadLocalMessages(sessionId);
-      }
       try {
         const res = await api.get(`/chat/sessions/${sessionId}/messages`);
-        setBackendAvailable(true);
         return res.data;
-      } catch {
-        setBackendAvailable(false);
+      } catch (err) {
+        console.warn(`Backend GET /chat/sessions/${sessionId}/messages failed, falling back to local messages:`, err);
         return loadLocalMessages(sessionId);
       }
     },
