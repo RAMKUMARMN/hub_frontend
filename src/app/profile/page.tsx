@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState} from "react";
 import type { FormEvent } from "react";
 import {
   Building2,
@@ -61,7 +61,8 @@ export default function ProfilePage() {
     buildProfileForm(profileUser)
   );
   const [saved, setSaved] = useState(false);
-
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     setForm(buildProfileForm(profileUser));
     setSaved(false);
@@ -106,7 +107,15 @@ export default function ProfilePage() {
     console.error("Failed to update profile", error);
   }
   };
+  const handleAvatarChange = (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0];
 
+  if (!file) return;
+
+  setAvatarPreview(URL.createObjectURL(file));
+};
   return (
     <main className="min-h-screen bg-cixio-bg px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -118,10 +127,21 @@ export default function ProfilePage() {
           <div className="mt-4 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <Avatar name={initials} size="lg" />
+                <div className="h-20 w-20 overflow-hidden rounded-full">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Avatar Preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Avatar name={initials} size="lg" />
+                  )}
+                </div>
 
                 <button
                   type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-cixio-blue text-white shadow-sm transition hover:bg-cixio-hover"
                   aria-label="Update avatar"
                 >
@@ -308,9 +328,22 @@ export default function ProfilePage() {
                     </p>
                   </div>
 
-                  <Button type="button">
-                    Choose image
-                  </Button>
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Choose image
+                </Button>
+              </>
                 </div>
               </div>
 

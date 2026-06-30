@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState , useRef, useMemo } from "react";
 import { Bell, Monitor, Shield, UserCog } from "lucide-react";
 
 const initialToggles = {
@@ -79,10 +79,37 @@ function Toggle({
 
 export default function SettingsPage() {
   const [toggles, setToggles] = useState(initialToggles);
+const [savedToggles, setSavedToggles] = useState(initialToggles);
+
+const [saved, setSaved] = useState(false);
+const [hasChanges, setHasChanges] = useState(false);
+
+useEffect(() => {
+  const changed =
+    JSON.stringify(toggles) !== JSON.stringify(savedToggles);
+
+  setHasChanges(changed);
+
+  if (changed) {
+    setSaved(false);
+  }
+}, [toggles, savedToggles]);
 
   const updateToggle = (key: ToggleKey) => {
     setToggles((current) => ({ ...current, [key]: !current[key] }));
   };
+  const handleSave = () => {
+  setSavedToggles(toggles);
+  setSaved(true);
+
+  setTimeout(() => {
+    setSaved(false);
+  }, 2000);
+};
+
+const handleReset = () => {
+  setToggles(savedToggles);
+};
 
   return (
     <main className="min-h-screen bg-cixio-bg px-4 py-6 sm:px-6 lg:px-8">
@@ -189,6 +216,43 @@ export default function SettingsPage() {
               </div>
             </section>
           </div>
+          <div className="sticky bottom-4 mt-6 flex items-center justify-between rounded-lg border border-cixio-light bg-white p-4 shadow-md">
+  <div>
+    {hasChanges ? (
+      <p className="text-sm font-medium text-orange-600">
+        ● You have unsaved changes
+      </p>
+    ) : saved ? (
+      <p className="text-sm font-medium text-green-600">
+        ✓ Preferences saved successfully
+      </p>
+    ) : (
+      <p className="text-sm text-gray-500">
+        All preferences are up to date
+      </p>
+    )}
+  </div>
+
+  <div className="flex gap-3">
+    <button
+      type="button"
+      onClick={handleReset}
+      disabled={!hasChanges}
+      className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      Reset
+    </button>
+
+    <button
+      type="button"
+      onClick={handleSave}
+      disabled={!hasChanges}
+      className="rounded-lg bg-cixio-blue px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      Save Changes
+    </button>
+  </div>
+</div>
         </div>
       </div>
     </main>

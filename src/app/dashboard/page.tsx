@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -80,6 +81,7 @@ const upcomingItems = [
 ];
 
 export default function DashboardPage() {
+  const [showAll, setShowAll] = useState(false);
   return (
     <main className="min-h-screen bg-cixio-bg px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -151,7 +153,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-cixio-dark">Recent activity</h2>
             </div>
             <div className="divide-y divide-cixio-light">
-              {recentActivity.map((item) => (
+              {recentActivity.slice(0, showAll ? recentActivity.length : 2).map((item) => (
                 <div key={item.title} className="flex items-start gap-4 px-5 py-4">
                   <div className="mt-1 rounded-md bg-cixio-light p-2 text-cixio-blue">
                     <Clock3 size={16} aria-hidden="true" />
@@ -163,6 +165,16 @@ export default function DashboardPage() {
                   <p className="whitespace-nowrap text-sm text-gray-400">{item.time}</p>
                 </div>
               ))}
+                        </div>
+
+            <div className="border-t border-cixio-light px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setShowAll(!showAll)}
+                className="text-sm font-semibold text-cixio-blue hover:underline"
+              >
+                {showAll ? "Show Less" : "View All Activity"}
+              </button>
             </div>
           </div>
 
