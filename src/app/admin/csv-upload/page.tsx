@@ -49,6 +49,7 @@ export default function CSVUploadPage() {
   const [users,    setUsers]    = useState<ParsedUser[]>([]);
   const [fileName, setFileName] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Process a File object
@@ -58,6 +59,7 @@ export default function CSVUploadPage() {
       return;
     }
     setFileName(file.name);
+    setSelectedFile(file);
     setStatus("parsing");
 
     const reader = new FileReader();
@@ -89,12 +91,16 @@ export default function CSVUploadPage() {
     setStatus("uploading");
 
     try {
-      const file = fileRef.current?.files?.[0];
+      const file = selectedFile;
       if (!file) throw new Error("No file selected");
 
       const formData = new FormData();
       formData.append("file", file);
-      await api.post(buildApiUrl("/admin/users/bulk"), formData);
+      await api.post(buildApiUrl("/admin/users/bulk"), formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       setStatus("done");
     } catch (error) {
       console.error(error);
@@ -106,6 +112,7 @@ export default function CSVUploadPage() {
     setStatus("idle");
     setUsers([]);
     setFileName("");
+    setSelectedFile(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -128,12 +135,12 @@ export default function CSVUploadPage() {
           <div>
             <p className="text-sm font-medium text-blue-700">CSV format required</p>
             <p className="text-xs text-blue-500 mt-0.5">
-              Your CSV must have a header row with columns: <code className="bg-blue-100 px-1 rounded">name, email, role</code>
+              Your CSV must have a header row with columns: <code className="bg-blue-100 px-1 rounded">full_name, email, role</code>
             </p>
             <button
               onClick={() => {
                 // Create and download a template CSV
-                const template = "name,email,role\nJohn Doe,john@company.io,Engineer\nJane Smith,jane@company.io,Designer";
+                const template = "full_name,email,role\nJohn Doe,john@company.io,Engineer\nJane Smith,jane@company.io,Designer";
                 const blob = new Blob([template], { type: "text/csv" });
                 const url  = URL.createObjectURL(blob);
                 const a    = document.createElement("a");

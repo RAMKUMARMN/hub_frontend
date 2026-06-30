@@ -14,6 +14,7 @@ interface Doc {
   url: string;        // pre-signed or direct download URL
   created_at: string; // ISO string
   updated_at: string;
+  session_id?: string | null;
 }
 
 type ViewMode = "grid" | "list";
@@ -80,6 +81,7 @@ function useDocs(initialData?: Doc[]) {
         url: `/documents/${d.id}/download`,
         created_at: d.created_at,
         updated_at: d.created_at,
+        session_id: d.session_id || null,
       }));
     },
     initialData,
@@ -99,6 +101,7 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
   const [view, setView]           = useState<ViewMode>("grid");
   const [search, setSearch]       = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [sort, setSort]           = useState<SortKey>("date");
   const [sortAsc, setSortAsc]     = useState(false);
   const [preview, setPreview]     = useState<Doc | null>(null);
@@ -121,7 +124,11 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
     .filter((d) => {
       const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
       const matchType   = typeFilter === "all" || d.type.startsWith(typeFilter);
-      return matchSearch && matchType;
+      const matchScope  =
+        scopeFilter === "all" ||
+        (scopeFilter === "session" && d.session_id !== null) ||
+        (scopeFilter === "global" && d.session_id === null);
+      return matchSearch && matchType && matchScope;
     })
     .sort((a, b) => {
       let cmp = 0;
@@ -340,6 +347,17 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
               ))}
             </select>
 
+            {/* Scope filter */}
+            <select
+              value={scopeFilter}
+              onChange={(e) => setScopeFilter(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-cixio-blue"
+            >
+              <option value="all">All Scopes</option>
+              <option value="session">Session-based</option>
+              <option value="global">Global</option>
+            </select>
+
             {/* Sort */}
             <select
               value={sort}
@@ -392,9 +410,9 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
             <div className="text-center py-20">
               <div className="text-5xl mb-3">📭</div>
               <p className="text-gray-500 text-sm font-medium">
-{search || typeFilter !== "all" ? "No files match your search." : "No documents uploaded yet."}
+{search || typeFilter !== "all" || scopeFilter !== "all" ? "No files match your search." : "No documents uploaded yet."}
               </p>
-              {(!search && typeFilter === "all") && (
+              {(!search && typeFilter === "all" && scopeFilter === "all") && (
                 <p className="text-gray-400 text-xs mt-1">Upload a file above to get started.</p>
               )}
             </div>
@@ -424,6 +442,18 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
                     <p className="text-xs font-medium text-gray-700 truncate text-center">{doc.name}</p>
                   )}
                   <p className="text-xs text-gray-400 text-center mt-1">{formatBytes(doc.size)}</p>
+                  
+                  <div className="flex justify-center mt-2">
+                    {doc.session_id ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-100 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/40">
+                        💬 Session
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/40">
+                        🌐 Global
+                      </span>
+                    )}
+                  </div>
 
                   {/* Actions — visible on hover */}
                   <div className="flex justify-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -457,6 +487,7 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
                     <th className="text-left px-4 py-3 font-medium">Name</th>
                     <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Type</th>
                     <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Size</th>
+                    <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Scope</th>
                     <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Uploaded</th>
                     <th className="px-4 py-3" />
                   </tr>
@@ -491,6 +522,17 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs hidden md:table-cell">
                         {formatBytes(doc.size)}
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        {doc.session_id ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-100 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/40">
+                            💬 Session
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/40">
+                            🌐 Global
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell">
                         {formatDate(doc.created_at)}
@@ -562,6 +604,7 @@ export default function DocumentBrowser({ initialDocuments, initialError }: Prop
                   {[
                     ["Type",     preview.type],
                     ["Size",     formatBytes(preview.size)],
+                    ["Scope",    preview.session_id ? "💬 Session-based" : "🌐 Global"],
                     ["Uploaded", formatDate(preview.created_at)],
                     ["Modified", formatDate(preview.updated_at)],
                   ].map(([label, value]) => (

@@ -25,7 +25,19 @@ export interface ChatMessage {
   content: string;
   thinking?: string;
   thinking_enabled?: boolean;
-  sources?: { filename: string; text: string }[];
+  sources?: {
+    filename?: string;
+    text?: string;
+    score?: number;
+    match_type?: string;
+    is_meta?: boolean;
+    use_hyde?: boolean;
+    hyde_succeeded?: boolean;
+    hyde_document?: string | null;
+    retrieval_mode?: string;
+    use_reranker?: boolean;
+    reranker_succeeded?: boolean;
+  }[];
   created_at: string;
 }
 

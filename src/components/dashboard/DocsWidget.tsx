@@ -10,6 +10,7 @@ interface DashboardDocument {
   file_type: string;
   file_size: number;
   updated_at: string;
+  session_id?: string | null;
 }
 
 const fileIcons: Record<string, string> = {
@@ -69,7 +70,12 @@ export default function DocsWidget() {
             >
               <span className="text-xl">{fileIcons[doc.file_type.split("/")[1]] ?? "📁"}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 truncate">{doc.filename}</p>
+                <p className="text-sm text-gray-700 truncate flex items-center gap-1.5">
+                  {doc.filename}
+                  <span className="text-[10px] opacity-75 shrink-0" title={doc.session_id ? "Session-based" : "Global"}>
+                    {doc.session_id ? "💬" : "🌐"}
+                  </span>
+                </p>
                 <p className="text-xs text-gray-400">{formatSize(doc.file_size)}</p>
               </div>
               <span className="text-xs text-gray-400 shrink-0">

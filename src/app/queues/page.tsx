@@ -57,6 +57,11 @@ const QUEUE_META: Record<
     color: "yellow",
     desc: "SMS gateway dispatch to thousands of recipients",
   },
+  "notify.bulk_whatsapp": {
+    icon: "🟢",
+    color: "green",
+    desc: "WhatsApp templates + Twilio dispatch at scale",
+  },
   "analytics.events": {
     icon: "📊",
     color: "orange",
@@ -76,6 +81,11 @@ const QUEUE_META: Record<
     icon: "🔔",
     color: "indigo",
     desc: "Push notification via Firebase / APNs",
+  },
+  "whatsapp.process": {
+    icon: "🟢",
+    color: "green",
+    desc: "Single WhatsApp template with Twilio retry",
   },
 };
 
@@ -134,6 +144,13 @@ const JOB_TYPES = [
     icon: "💬",
     desc: "Dispatch SMS alert to 100 recipients",
     payload: { count: 100, body: "CixioHub: Important update." },
+  },
+  {
+    type: "bulk_whatsapp",
+    label: "Bulk WhatsApp",
+    icon: "🟢",
+    desc: "Dispatch WhatsApp templates to 80 recipients",
+    payload: { count: 80, body: "CixioHub: Your verification session is active." },
   },
   {
     type: "analytics",
@@ -367,7 +384,11 @@ export default function QueuesPage() {
   // ── SSE connection ──────────────────────────────────────────────────────
   useEffect(() => {
     const connect = () => {
-      const es = new EventSource(`${NOTIFY_URL}/api/v1/jobs/stream`);
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const url = token
+        ? `${NOTIFY_URL}/api/v1/jobs/stream?token=${encodeURIComponent(token)}`
+        : `${NOTIFY_URL}/api/v1/jobs/stream`;
+      const es = new EventSource(url);
       esRef.current = es;
 
       es.onopen = () => {
@@ -460,9 +481,14 @@ export default function QueuesPage() {
     setSubmitting(jt.type);
     appendLog(`📤 Submitting ${jt.label}…`);
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`${NOTIFY_URL}/api/v1/jobs/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           job_type: jt.type,
           label: jt.label,

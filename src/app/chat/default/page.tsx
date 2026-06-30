@@ -17,7 +17,19 @@ type ChatMessage = {
   content: string;
   thinking?: string;
   thinking_enabled?: boolean;
-  sources?: { filename: string; text: string }[];
+  sources?: {
+    filename?: string;
+    text?: string;
+    score?: number;
+    match_type?: string;
+    is_meta?: boolean;
+    use_hyde?: boolean;
+    hyde_succeeded?: boolean;
+    hyde_document?: string | null;
+    retrieval_mode?: string;
+    use_reranker?: boolean;
+    reranker_succeeded?: boolean;
+  }[];
   created_at?: string;
 };
 
@@ -268,9 +280,16 @@ export default function ChatSessionPage() {
             console.log("🔍 Stream parsed chunk:", parsed);
             if ("sources" in parsed) {
               setLocalMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === tempAssistantId ? { ...msg, sources: parsed.sources } : msg
-                )
+                prev.map((msg) => {
+                  if (msg.id === tempAssistantId) {
+                    const combinedSources = [...(parsed.sources || [])];
+                    if (parsed.search_metadata) {
+                      combinedSources.push({ ...parsed.search_metadata, is_meta: true });
+                    }
+                    return { ...msg, sources: combinedSources };
+                  }
+                  return msg;
+                })
               );
             } else if ("thinking" in parsed) {
               console.log("💡 Received thinking token:", parsed.thinking);
@@ -462,13 +481,13 @@ export default function ChatSessionPage() {
                 {m.role === "assistant" ? (
                   <>
                     {/* Citations references */}
-                    {m.sources && m.sources.length > 0 && (
+                    {m.sources && m.sources.filter(s => !s.is_meta).length > 0 && (
                       <button
                         onClick={() => setActiveDrawerSources(m.sources || null)}
                         className="inline-flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-700 bg-purple-500/10 dark:bg-purple-500/5 border border-purple-500/20 dark:border-purple-800/30 px-2.5 py-1 rounded-full cursor-pointer hover:bg-purple-500/20 transition-all mb-2 w-fit select-none"
                       >
                         <Info className="h-3 w-3" />
-                        Grounded in {m.sources.length} document sources · Click to inspect
+                        Grounded in {m.sources.filter(s => !s.is_meta).length} document sources · Click to inspect
                       </button>
                     )}
 
@@ -518,6 +537,7 @@ export default function ChatSessionPage() {
         {/* Input Area */}
         <ChatInput
           onSend={handleSend}
+          onStop={stopGeneration}
           disabled={isAsking}
           activeSessionId={activeSessionId}
           documents={sessionDocuments}
@@ -544,28 +564,104 @@ export default function ChatSessionPage() {
 
             {/* List of matched vector chunks */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 font-sans">
-              {activeDrawerSources.map((source, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 p-4 hover:border-purple-500/30 transition-all duration-200 text-left"
-                >
-                  {/* Metadata */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded font-mono">
-                      Chunk {idx + 1} {source.score ? `· Match ${(source.score * 100).toFixed(1)}%` : ""}
-                    </span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                      File: {source.filename || "Unknown"}{" "}
-                      {source.page_number ? `· Page ${source.page_number}` : ""}
-                    </span>
-                  </div>
+              {/* Search Strategy Metadata Card */}
+              {(() => {
+                const meta = activeDrawerSources.find((s: any) => s.is_meta);
+                const actualChunks = activeDrawerSources.filter((s: any) => !s.is_meta);
+                return (
+                  <>
+                    {meta && (
+                      <div className="mb-6 rounded-xl border border-purple-100 dark:border-purple-900/40 bg-purple-50/40 dark:bg-purple-950/10 p-4 space-y-3">
+                        <div className="flex items-center justify-between border-b border-purple-100/60 dark:border-purple-900/30 pb-2">
+                          <h4 className="text-xs font-semibold text-purple-800 dark:text-purple-400 uppercase tracking-wider">
+                            Search Strategy & Logic
+                          </h4>
+                          <span className="text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2.5 py-0.5 rounded-full font-semibold font-mono">
+                            Mode: {meta.retrieval_mode ? meta.retrieval_mode.toUpperCase() : "SEMANTIC"}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <p className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">HyDE Status</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${meta.use_hyde ? (meta.hyde_succeeded ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500') : 'bg-gray-300 dark:bg-gray-600'}`} />
+                              <span className="font-medium text-gray-700 dark:text-gray-300 truncate">
+                                {meta.use_hyde 
+                                  ? (meta.hyde_succeeded ? 'Active' : 'Fail (Fallback)') 
+                                  : 'Disabled'}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Retrieval Method</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${meta.retrieval_mode === 'hybrid' ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500'}`} />
+                              <span className="font-medium text-gray-700 dark:text-gray-300 truncate">
+                                {meta.retrieval_mode === 'hybrid' ? 'Hybrid (RRF)' : 'Semantic Only'}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Reranker Status</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${meta.use_reranker ? (meta.reranker_succeeded ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500') : 'bg-gray-300 dark:bg-gray-600'}`} />
+                              <span className="font-medium text-gray-700 dark:text-gray-300 truncate">
+                                {meta.use_reranker 
+                                  ? (meta.reranker_succeeded ? 'Active' : 'Fail (Fallback)') 
+                                  : 'Disabled'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
 
-                  {/* Extract Text */}
-                  <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed bg-white dark:bg-[#212121] p-3 rounded-lg border border-gray-200 dark:border-gray-800 font-mono select-text whitespace-pre-wrap max-h-56 overflow-y-auto">
-                    {source.text}
-                  </p>
-                </div>
-              ))}
+                        {meta.use_hyde && meta.hyde_succeeded && meta.hyde_document && (
+                          <div className="mt-2 pt-2 border-t border-purple-100/60 dark:border-purple-900/30">
+                            <p className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold mb-1">Generated Hypothetical Passage (HyDE)</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 italic bg-white dark:bg-gray-900/50 p-2.5 rounded-lg border border-purple-100/40 dark:border-purple-900/20 font-mono select-text whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
+                              "{meta.hyde_document}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {actualChunks.map((source: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 p-4 hover:border-purple-500/30 transition-all duration-200 text-left"
+                      >
+                        {/* Metadata */}
+                        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50/10 px-2 py-0.5 rounded font-mono font-medium">
+                            Chunk {idx + 1} {source.score ? `· Match ${(source.score * 100).toFixed(1)}%` : ""}
+                          </span>
+                          {source.match_type && (
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-mono font-semibold capitalize ${
+                              source.match_type === 'hybrid'
+                                ? 'text-purple-600 dark:text-purple-400 bg-purple-50/10'
+                                : source.match_type === 'keyword'
+                                ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                                : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                            }`}>
+                              Match: {source.match_type}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate max-w-[200px]">
+                            File: {source.filename || "Unknown"}{" "}
+                            {source.page_number ? `· Page ${source.page_number}` : ""}
+                          </span>
+                        </div>
+
+                        {/* Extract Text */}
+                        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed bg-white dark:bg-[#212121] p-3 rounded-lg border border-gray-200 dark:border-gray-800 font-mono select-text whitespace-pre-wrap max-h-56 overflow-y-auto">
+                          {source.text}
+                        </p>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </section>

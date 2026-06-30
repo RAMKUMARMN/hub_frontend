@@ -17,12 +17,13 @@ type Props = {
     ragChunkLimit: number,
     documentIds: string[] | null
   ) => void;
+  onStop?: () => void;
   disabled: boolean;
   activeSessionId?: string;
   documents: any[];
 };
 
-export default function ChatInput({ onSend, disabled, activeSessionId, documents }: Props) {
+export default function ChatInput({ onSend, onStop, disabled, activeSessionId, documents }: Props) {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const [useRag, setUseRag] = useState(false);
@@ -316,7 +317,10 @@ export default function ChatInput({ onSend, disabled, activeSessionId, documents
                             }}
                             className="w-3.5 h-3.5 accent-purple-600 rounded border-slate-300 dark:border-slate-700 cursor-pointer"
                           />
-                          <span className="text-[10px] text-slate-600 dark:text-slate-300 truncate" title={doc.filename}>
+                          <span className="text-[10px] text-slate-600 dark:text-slate-300 truncate flex items-center gap-1" title={doc.filename}>
+                            <span className="text-[9px] opacity-75 shrink-0" title={doc.session_id ? "Session-based" : "Global"}>
+                              {doc.session_id ? "💬" : "🌐"}
+                            </span>
                             {doc.filename}
                           </span>
                         </label>
@@ -375,14 +379,25 @@ export default function ChatInput({ onSend, disabled, activeSessionId, documents
           rows={1}
           className="flex-1 border border-cixio-light dark:border-slate-700 rounded-xl px-3 py-2 text-sm resize-none bg-cixio-bg/20 dark:bg-slate-950 focus:border-cixio-blue focus:ring-1 focus:ring-cixio-blue text-cixio-dark dark:text-slate-100 outline-none transition-all"
         />
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={disabled || !text.trim()}
-          className="px-4 py-2 bg-cixio-blue hover:bg-cixio-hover disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white font-medium rounded-xl transition-colors"
-        >
-          ➤
-        </button>
+        {disabled ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center cursor-pointer"
+            title="Stop generation"
+          >
+            ■
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!text.trim()}
+            className="px-4 py-2 bg-cixio-blue hover:bg-cixio-hover disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white font-medium rounded-xl transition-colors flex items-center justify-center cursor-pointer"
+          >
+            ➤
+          </button>
+        )}
       </div>
     </div>
   );
