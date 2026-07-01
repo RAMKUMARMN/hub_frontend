@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Database, Zap, Brain, Paperclip, Loader2, Globe, Sparkles, Shuffle, ArrowDownUp, SlidersHorizontal } from "lucide-react";
+import { Database, Zap, Brain, Paperclip, Loader2, Globe, Sparkles, Shuffle, ArrowDownUp, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 
@@ -15,7 +15,8 @@ type Props = {
     retrievalMode: string,
     useReranker: boolean,
     ragChunkLimit: number,
-    documentIds: string[] | null
+    documentIds: string[] | null,
+    agentMode: boolean
   ) => void;
   onStop?: () => void;
   disabled: boolean;
@@ -26,7 +27,7 @@ type Props = {
 export default function ChatInput({ onSend, onStop, disabled, activeSessionId, documents }: Props) {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
-  const [useRag, setUseRag] = useState(false);
+  const [chatMode, setChatMode] = useState<"direct" | "rag" | "agent">("direct");
   const [thinkingMode, setThinkingMode] = useState(false);
   const [webSearch, setWebSearch] = useState(false);
   const [useHyde, setUseHyde] = useState(false);
@@ -36,14 +37,19 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showDocSelector, setShowDocSelector] = useState(false);
+  const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
-  
+
+  const useRag = chatMode === "rag";
+  const agentMode = chatMode === "agent";
+
   const settingsRef = useRef<HTMLDivElement>(null);
   const docSelectorRef = useRef<HTMLDivElement>(null);
+  const modeDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Click outside to close RAG settings and Targeted Documents overlays
+  // Click outside to close RAG settings, Targeted Documents, and Chat Mode dropdown overlays
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
@@ -51,6 +57,9 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
       }
       if (docSelectorRef.current && !docSelectorRef.current.contains(event.target as Node)) {
         setShowDocSelector(false);
+      }
+      if (modeDropdownRef.current && !modeDropdownRef.current.contains(event.target as Node)) {
+        setShowModeDropdown(false);
       }
     }
 
@@ -64,7 +73,7 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
     if (!text.trim() || disabled) return;
     const retrievalMode = useHybrid ? "hybrid" : "semantic";
     const documentIdsToSend = selectedDocIds.length > 0 ? selectedDocIds : null;
-    onSend(text, useRag, thinkingMode, webSearch, useHyde, retrievalMode, useReranker, ragChunkLimit, documentIdsToSend);
+    onSend(text, useRag, thinkingMode, webSearch, useHyde, retrievalMode, useReranker, ragChunkLimit, documentIdsToSend, agentMode);
     setText("");
   }
 
@@ -79,7 +88,7 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
     setUploadStatus(`Uploading and indexing "${file.name}"...`);
 
     try {
-      const res = await api.post(`/documents/upload?session_id=${activeSessionId}`, form, {
+      const res = await api.post(`/documents/upload?session_id=${activeSessionId}&use_rag=${useRag}`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -112,52 +121,109 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
 
       {/* Main control row */}
       <div className="flex gap-2 mb-2 select-none items-center">
-        {/* RAG / LLM Mode Toggle */}
-        <button
-          type="button"
-          onClick={() => setUseRag((v) => !v)}
-          className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${
-            useRag
-              ? "border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 hover:bg-purple-100/70 dark:hover:bg-purple-900/40"
-              : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
-          }`}
-        >
-          {useRag ? (
-            <Database className="h-3.5 w-3.5 text-purple-500 animate-pulse" />
-          ) : (
-            <Zap className="h-3.5 w-3.5 text-slate-500" />
+        {/* Chat Mode Dropdown */}
+        <div className="relative" ref={modeDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setShowModeDropdown((v) => !v)}
+            className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${
+              chatMode === "rag"
+                ? "border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 hover:bg-purple-100/70 dark:hover:bg-purple-900/40"
+                : chatMode === "agent"
+                ? "border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100/70 dark:hover:bg-amber-900/40"
+                : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
+            }`}
+          >
+            {chatMode === "rag" ? (
+              <Database className="h-3.5 w-3.5 text-purple-500 animate-pulse" />
+            ) : chatMode === "agent" ? (
+              <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+            ) : (
+              <Zap className="h-3.5 w-3.5 text-slate-500" />
+            )}
+            <span>
+              {chatMode === "rag"
+                ? "📚 RAG Mode"
+                : chatMode === "agent"
+                ? "🤖 Agent Mode"
+                : "💬 Direct LLM"}
+            </span>
+            <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
+          </button>
+
+          {showModeDropdown && (
+            <div className="absolute left-0 bottom-full mb-1.5 z-50 w-44 bg-white dark:bg-[#1e1e1e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <button
+                type="button"
+                onClick={() => {
+                  setChatMode("direct");
+                  setShowModeDropdown(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                  chatMode === "direct" ? "text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-800/30" : "text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5 text-slate-500" />
+                <span>💬 Direct LLM</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChatMode("rag");
+                  setShowModeDropdown(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                  chatMode === "rag" ? "text-purple-600 dark:text-purple-400 bg-slate-50 dark:bg-slate-800/30" : "text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <Database className="h-3.5 w-3.5 text-purple-500" />
+                <span>📚 RAG Mode</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChatMode("agent");
+                  setShowModeDropdown(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                  chatMode === "agent" ? "text-amber-600 dark:text-amber-400 bg-slate-50 dark:bg-slate-800/30" : "text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span>🤖 Agent Mode</span>
+              </button>
+            </div>
           )}
-          <span>{useRag ? "📚 RAG Mode" : "💬 Direct LLM"}</span>
-        </button>
+        </div>
 
         {/* Deep Reasoning Toggle */}
         <button
           type="button"
           onClick={() => setThinkingMode((v) => !v)}
-          className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${
-            thinkingMode
+          className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${thinkingMode
               ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70 dark:hover:bg-blue-900/40"
               : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
-          }`}
+            }`}
         >
           <Brain className={`h-3.5 w-3.5 ${thinkingMode ? "text-blue-500 animate-pulse" : "text-slate-500"}`} />
           <span>{thinkingMode ? "🧠 Thinking: ON" : "⚡ Thinking: OFF"}</span>
         </button>
 
-        {/* Web Search Toggle (always visible) */}
-        <button
-          type="button"
-          onClick={() => setWebSearch((v) => !v)}
-          className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${
-            webSearch
-              ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40"
-              : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
-          }`}
-          title="Toggle internet search integration"
-        >
-          <Globe className={`h-3.5 w-3.5 ${webSearch ? "text-emerald-500 animate-pulse" : "text-slate-500"}`} />
-          <span>{webSearch ? "🌐 Web: ON" : "🌐 Web: OFF"}</span>
-        </button>
+        {/* Web Search Toggle (hidden in Agent Mode) */}
+        {chatMode !== "agent" && (
+          <button
+            type="button"
+            onClick={() => setWebSearch((v) => !v)}
+            className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${webSearch
+                ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40"
+                : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
+              }`}
+            title="Toggle internet search integration"
+          >
+            <Globe className={`h-3.5 w-3.5 ${webSearch ? "text-emerald-500 animate-pulse" : "text-slate-500"}`} />
+            <span>{webSearch ? "🌐 Web: ON" : "🌐 Web: OFF"}</span>
+          </button>
+        )}
 
         {/* Advanced RAG Settings Dropdown Trigger */}
         {useRag && (
@@ -165,11 +231,10 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
             <button
               type="button"
               onClick={() => setShowSettings((v) => !v)}
-              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${
-                showSettings
+              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans ${showSettings
                   ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
                   : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-              }`}
+                }`}
               title="Configure advanced RAG search options"
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -190,14 +255,12 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
                   <button
                     type="button"
                     onClick={() => setUseHyde((v) => !v)}
-                    className={`w-9 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ${
-                      useHyde ? "bg-amber-500" : "bg-slate-200 dark:bg-slate-800"
-                    }`}
+                    className={`w-9 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ${useHyde ? "bg-amber-500" : "bg-slate-200 dark:bg-slate-800"
+                      }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                        useHyde ? "translate-x-4" : "translate-x-0"
-                      }`}
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${useHyde ? "translate-x-4" : "translate-x-0"
+                        }`}
                     />
                   </button>
                 </div>
@@ -210,14 +273,12 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
                   <button
                     type="button"
                     onClick={() => setUseHybrid((v) => !v)}
-                    className={`w-9 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ${
-                      useHybrid ? "bg-orange-500" : "bg-slate-200 dark:bg-slate-800"
-                    }`}
+                    className={`w-9 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ${useHybrid ? "bg-orange-500" : "bg-slate-200 dark:bg-slate-800"
+                      }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                        useHybrid ? "translate-x-4" : "translate-x-0"
-                      }`}
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${useHybrid ? "translate-x-4" : "translate-x-0"
+                        }`}
                     />
                   </button>
                 </div>
@@ -230,14 +291,12 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
                   <button
                     type="button"
                     onClick={() => setUseReranker((v) => !v)}
-                    className={`w-9 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ${
-                      useReranker ? "bg-rose-500" : "bg-slate-200 dark:bg-slate-800"
-                    }`}
+                    className={`w-9 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ${useReranker ? "bg-rose-500" : "bg-slate-200 dark:bg-slate-800"
+                      }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                        useReranker ? "translate-x-4" : "translate-x-0"
-                      }`}
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${useReranker ? "translate-x-4" : "translate-x-0"
+                        }`}
                     />
                   </button>
                 </div>
@@ -250,7 +309,7 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setRagChunkLimit((v) => Math.max(1, v - 1))}
+                      onClick={() => setRagChunkLimit((v) => Math.max(4, v - 1))}
                       className="w-5 h-5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-xs hover:bg-slate-200 cursor-pointer select-none"
                     >
                       -
@@ -270,17 +329,16 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
           </div>
         )}
 
-        {/* Targeted Documents Dropdown Trigger (visible in RAG mode) */}
-        {useRag && (
+        {/* Targeted Documents Dropdown Trigger (visible in RAG or Direct LLM mode when files exist) */}
+        {documents && documents.length > 0 && (
           <div ref={docSelectorRef} className="relative">
             <button
               type="button"
               onClick={() => setShowDocSelector((v) => !v)}
-              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans relative ${
-                showDocSelector
+              className={`flex items-center gap-1.5 border rounded-xl px-2.5 py-1 shadow-sm transition-all cursor-pointer text-[11px] font-semibold font-sans relative ${showDocSelector
                   ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400"
                   : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-              }`}
+                }`}
               title="Select targeted documents to search"
             >
               <span>
@@ -340,7 +398,7 @@ export default function ChatInput({ onSend, onStop, disabled, activeSessionId, d
 
       <div className="flex gap-2 items-end">
         {/* Upload Document Button (placed to the left of the chat bar) */}
-        {useRag && activeSessionId && (
+        {activeSessionId && (
           <div className="flex-shrink-0">
             <button
               type="button"
