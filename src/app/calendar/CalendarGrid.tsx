@@ -25,7 +25,10 @@ export default function CalendarGrid() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 5, 1)); // June 2026
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [googleToken, setGoogleToken] = useState("");
