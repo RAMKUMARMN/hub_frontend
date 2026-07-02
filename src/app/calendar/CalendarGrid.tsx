@@ -182,9 +182,15 @@ export default function CalendarGrid() {
       setGoogleToken("");
     },
     onError: (err: any) => {
+      const errMsg = err.response?.data?.detail || "Sync failed. Check your token.";
+      if (errMsg.includes("Google OAuth token expired or invalid")) {
+        localStorage.removeItem("google_access_token");
+        localStorage.removeItem("google_access_token_expiry");
+        setGoogleConnectionStatus("expired");
+      }
       setSyncFeedback({
         status: "error",
-        message: err.response?.data?.detail || "Sync failed. Check your token.",
+        message: errMsg,
       });
     },
   });
