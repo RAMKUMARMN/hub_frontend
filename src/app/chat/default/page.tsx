@@ -140,7 +140,8 @@ export default function ChatSessionPage() {
     retrievalMode: string = "semantic",
     useReranker: boolean = false,
     ragChunkLimit: number = 4,
-    documentIds: string[] | null = null
+    documentIds: string[] | null = null,
+    agentMode: boolean = false
   ) {
     const currentQuestion = text.trim();
     if (!currentQuestion || isAsking) return;
@@ -207,6 +208,7 @@ export default function ChatSessionPage() {
           use_reranker: useReranker,
           rag_chunk_limit: ragChunkLimit,
           document_ids: documentIds,
+          agent_mode: agentMode,
         }),
         signal: controller.signal,
       });
@@ -241,6 +243,7 @@ export default function ChatSessionPage() {
                   use_reranker: useReranker,
                   rag_chunk_limit: ragChunkLimit,
                   document_ids: documentIds,
+                  agent_mode: agentMode,
                 }),
                 signal: controller.signal,
               });

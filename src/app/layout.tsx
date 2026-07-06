@@ -19,12 +19,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // on <html> before React hydrates, which would otherwise cause a mismatch warning
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-cixio-bg dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-          <TasksProvider>
             <Providers>
-              <NavBar />
-              <div className="pt-14">{children}</div>
+              <TasksProvider>
+                <NavBar />
+                <div className="pt-14">{children}</div>
+              </TasksProvider>
             </Providers>
-          </TasksProvider>
       </body>
     </html>
   );

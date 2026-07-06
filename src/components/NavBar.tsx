@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ const NAV_LINKS = [
   { href: "/chat",      label: "Chat"      },
   { href: "/documents", label: "Documents" },
   { href: "/todos",     label: "Todos"     },
+  { href: "/calendar",  label: "Calendar"  },
   { href: "/queues",    label: "Queues"    },
   { href: "/settings",  label: "Settings"  },
 ];
@@ -25,12 +27,17 @@ const ADMIN_LINKS = [
 const AUTH_PATHS = ["/auth/login", "/auth/register", "/login", "/register"];
 
 export default function NavBar() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const pathname = usePathname();
   const router   = useRouter();
   const { user, clearAuth } = useAuthStore();
 
-  // Hide navbar on auth pages
-  if (AUTH_PATHS.some((p) => pathname.startsWith(p))) return null;
+  // Hide navbar on auth pages or until client-side mounting is complete
+  if (!mounted || AUTH_PATHS.some((p) => pathname.startsWith(p))) return null;
 
   const handleLogout = () => {
     clearAuth();
