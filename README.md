@@ -244,6 +244,21 @@ CMD ["node", "server.js"]
 
 ---
 
+## Using the Agents
+
+Frontend agents help with code architecture, MCP tooling, and plugin development. Invoke them by prefixing your prompt with `@agent-name`.
+
+| Agent | When to use | Example prompt |
+|---|---|---|
+| `@frontend-architect` | Audit `"use client"` boundaries, flag Server Component import violations, suggest component extraction into `components/client/` or `components/server/` | "Audit the frontend for use client boundaries and extractable inline logic" |
+| `@frontend-web-vitals` | Audit accessibility, image optimization, and layout shift risks to improve Core Web Vitals | "Check for layout shift risks in the chat interface" |
+| `@frontend-mcp` | Create or manage MCP discovery tools and server registration | "Add an MCP tool for listing chat sessions" |
+| `@frontend-plugin` | Develop the plugin system — skills, hooks, rules, agent definitions | "Create a new plugin skill for file upload" |
+
+Agent definitions are in `.github/agents/`. Each file documents its scope, inputs, outputs, and example prompts.
+
+---
+
 ## Related Repositories
 
 | Repository | Description |
