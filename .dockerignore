@@ -1,0 +1,25 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Next.js build output
+.next/
+out/
+
+# IDE/Editor folders
+.vscode/
+.idea/
+
+# Git folder
+.git/
+.gitignore
+
+# Environment files
+.env*.local
+
+# Miscellaneous
+Dockerfile
+README.md
+mcp_hub_frontend/
+tools/
+plugin/
