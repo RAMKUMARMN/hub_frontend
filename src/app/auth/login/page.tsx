@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import api from "@/lib/api";
+import api, { buildApiUrl } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import type { TokenResponse, User } from "@/types";
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 const schema = z.object({
   email: z.string().email("Invalid email"),
@@ -20,7 +26,9 @@ type FormData = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setTokens = useAuthStore((s) => s.setTokens);
   const [error, setError] = useState<string | null>(null);
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
 
   const {
     register,
@@ -28,19 +36,85 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  // 1. Fetch public Google Client ID configuration from backend
+  useEffect(() => {
+    api.get("/auth/config")
+      .then((res) => {
+        if (res.data?.google_client_id && res.data.google_client_id !== "your_google_client_id") {
+          setGoogleClientId(res.data.google_client_id);
+        }
+      })
+      .catch((err) => console.error("Error loading oauth config:", err));
+  }, []);
+
+  // 2. Load Google Identity Services script and render button
+  useEffect(() => {
+    if (!googleClientId) return;
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleLoginCallback,
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("google-signin-btn"),
+          { theme: "outline", size: "large", width: 384 }
+        );
+      }
+    };
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [googleClientId]);
+
+  // 3. Callback to handle Google token payload and sign in on backend
+  const handleGoogleLoginCallback = async (response: any) => {
+    setError(null);
+    try {
+      const idToken = response.credential;
+      const tokenRes = await api.post<TokenResponse>(buildApiUrl("/auth/google"), {
+        id_token: idToken,
+      });
+      const { access_token, refresh_token } = tokenRes.data;
+
+      setTokens(access_token, refresh_token);
+
+      // Fetch current user profile
+      const userRes = await api.get<User>(buildApiUrl("/auth/me"));
+
+      setAuth(userRes.data, access_token, refresh_token);
+      router.push("/dashboard");
+    } catch (err: any) {
+      const message =
+        err.response?.data?.detail ??
+        "Google Sign-In failed. Check your credentials.";
+      setError(message);
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     setError(null);
     try {
-      const tokenRes = await api.post<TokenResponse>("/auth/login", data);
+      const tokenRes = await api.post<TokenResponse>(buildApiUrl("/auth/login"), data);
       const { access_token, refresh_token } = tokenRes.data;
 
+      setTokens(access_token, refresh_token);
+
       // Fetch current user profile
-      const userRes = await api.get<User>("/auth/me", {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
+      const userRes = await api.get<User>(buildApiUrl("/auth/me"));
 
       setAuth(userRes.data, access_token, refresh_token);
-      router.push("/chat");
+      router.push("/dashboard");
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
@@ -50,7 +124,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-cixio-dark">
+    <div className="min-h-screen flex bg-cixio-dark font-sans">
       {/* Left panel — brand */}
       <div className="hidden lg:flex flex-col items-center justify-center w-1/2 bg-gradient-to-br from-cixio-navy via-cixio-dark to-[#060F3A] p-12 relative overflow-hidden">
         {/* Decorative blobs */}
@@ -117,9 +191,26 @@ export default function LoginPage() {
               </button>
             </form>
 
+            {googleClientId && (
+              <>
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-400 font-semibold tracking-wider">Or continue with</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div id="google-signin-btn" className="w-full max-w-sm flex justify-center" />
+                </div>
+              </>
+            )}
+
             <p className="text-center text-sm mt-5 text-gray-500">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-cixio-blue font-medium hover:text-cixio-navy transition-colors">
+              <Link href="/auth/register" className="text-cixio-blue font-medium hover:text-cixio-navy transition-colors">
                 Create one
               </Link>
             </p>

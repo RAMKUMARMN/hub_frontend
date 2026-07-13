@@ -1,91 +1,227 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api";
-import type { Todo } from "@/types";
+import TaskCard from "@/components/todos/TaskCard";
+import TaskModal from "@/components/todos/TaskModal";
+import TaskFilters, { Filters, applyFilters } from "@/components/todos/taskfilters";
+import { useTasks } from "@/store/tasksContext";
+import { TaskFormData, Task } from "@/components/todos/types";
+
+const DEFAULT_FILTERS: Filters = {
+  search: "",
+  status: "all",
+  priority: "all",
+};
 
 export default function TodosPage() {
-  const queryClient = useQueryClient();
-  const [newTitle, setNewTitle] = useState("");
+  const { tasks, createTask, updateTask, deleteTask, toggleSubtask } = useTasks();
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const { data: todos = [] } = useQuery({
-    queryKey: ["todos"],
-    queryFn: () => api.get<Todo[]>("/todos").then((r) => r.data),
-  });
+  const visibleTasks = applyFilters(tasks, filters);
 
-  const createMutation = useMutation({
-    mutationFn: (title: string) => api.post<Todo>("/todos", { title }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      setNewTitle("");
-    },
-  });
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.status === "done").length;
+  const inProgress = tasks.filter((t) => t.status === "in_progress").length;
+  const overdue = tasks.filter(
+    (t) =>
+      t.status !== "done" &&
+      new Date(t.dueDate) < new Date(new Date().toDateString())
+  ).length;
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      api.put(`/todos/${id}/complete`, { completed }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
+  function openNewModal() {
+    setEditingTask(null);
+    setModalOpen(true);
+  }
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/todos/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
+  function closeModal() {
+    setModalOpen(false);
+    setEditingTask(null);
+  }
+
+  function handleSave(data: TaskFormData) {
+    if (editingTask) {
+      updateTask(editingTask.id, data);
+    } else {
+      createTask(data);
+    }
+    closeModal();
+  }
+
+  function handleDelete(id: string) {
+    if (!confirm("Delete this task?")) return;
+    deleteTask(id);
+  }
+
+  function handleEdit(task: Task) {
+    setEditingTask(task);
+    setModalOpen(true);
+  }
+
+  function handleStatusChange(id: string, status: Task["status"]) {
+    updateTask(id, { status });
+  }
+
+  function handleToggleSubtask(taskId: string, subtaskId: string) {
+    toggleSubtask(taskId, subtaskId);
+  }
+
+  const grouped = {
+    todo: visibleTasks.filter((t) => t.status === "todo"),
+    in_progress: visibleTasks.filter((t) => t.status === "in_progress"),
+    done: visibleTasks.filter((t) => t.status === "done"),
+  };
 
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Todo List</h1>
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-800">Tasks</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              {done}/{total} done · {inProgress} in progress
+              {overdue > 0 && (
+                <span className="text-red-400 ml-2">· {overdue} overdue</span>
+              )}
+            </p>
+          </div>
 
-      {/* Create form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (newTitle.trim()) createMutation.mutate(newTitle.trim());
-        }}
-        className="flex gap-2 mb-6"
-      >
-        <input
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="Add a new task..."
-          className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          disabled={!newTitle.trim()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          Add
-        </button>
-      </form>
+          <button
+            onClick={openNewModal}
+            className="bg-cixio-blue text-white text-sm px-4 py-2 rounded-lg hover:bg-cixio-hover transition-colors flex items-center gap-2"
+          >
+            <span className="text-base leading-none">+</span>
+            New task
+          </button>
+        </div>
 
-      {/* List */}
-      {todos.length === 0 ? (
-        <p className="text-gray-400 text-center">No tasks yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {todos.map((todo) => (
-            <li key={todo.id} className="flex items-center gap-3 p-3 border rounded-lg">
-              <input
-                type="checkbox"
-                checked={todo.completed}
-                onChange={() => toggleMutation.mutate({ id: todo.id, completed: !todo.completed })}
-                className="w-4 h-4"
+        {total > 0 && (
+          <div className="mb-5">
+            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-cixio-blue rounded-full transition-all duration-500"
+                style={{ width: `${(done / total) * 100}%` }}
               />
-              <span className={`flex-1 ${todo.completed ? "line-through text-gray-400" : ""}`}>
-                {todo.title}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {Math.round((done / total) * 100)}% complete
+            </p>
+          </div>
+        )}
+
+        <div className="mb-5">
+          <TaskFilters
+            filters={filters}
+            onChange={setFilters}
+            taskCount={visibleTasks.length}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-gray-600">To do</h2>
+              <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
+                {grouped.todo.length}
               </span>
-              <button
-                onClick={() => deleteMutation.mutate(todo.id)}
-                className="text-red-400 hover:text-red-600 text-sm"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+            </div>
+            <div className="space-y-3">
+              {grouped.todo.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleSubtask={handleToggleSubtask}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+              {grouped.todo.length === 0 && (
+                <div className="text-center text-xs text-gray-300 py-8 border-2 border-dashed border-gray-100 rounded-xl">
+                  No tasks here
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-blue-600">In progress</h2>
+              <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                {grouped.in_progress.length}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {grouped.in_progress.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleSubtask={handleToggleSubtask}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+              {grouped.in_progress.length === 0 && (
+                <div className="text-center text-xs text-gray-300 py-8 border-2 border-dashed border-gray-100 rounded-xl">
+                  No tasks here
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-green-600">Done</h2>
+              <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full">
+                {grouped.done.length}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {grouped.done.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleSubtask={handleToggleSubtask}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+              {grouped.done.length === 0 && (
+                <div className="text-center text-xs text-gray-300 py-8 border-2 border-dashed border-gray-100 rounded-xl">
+                  No tasks here
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {total === 0 && (
+          <div className="text-center py-20">
+            <p className="text-4xl mb-3">✅</p>
+            <p className="text-gray-500 font-medium">No tasks yet</p>
+            <p className="text-sm text-gray-400 mt-1 mb-4">
+              Create your first task to get started
+            </p>
+            <button
+              onClick={openNewModal}
+              className="bg-cixio-blue text-white text-sm px-4 py-2 rounded-lg hover:bg-cixio-hover transition-colors"
+            >
+              + New task
+            </button>
+          </div>
+        )}
+
+        {modalOpen && (
+          <TaskModal
+            task={editingTask}
+            onSave={handleSave}
+            onClose={closeModal}
+          />
+        )}
+      </div>
+    </main>
   );
 }
