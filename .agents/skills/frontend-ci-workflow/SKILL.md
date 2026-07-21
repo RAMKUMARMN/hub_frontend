@@ -17,6 +17,8 @@ metadata:
 - [Notifications](#notifications)
 - [Required Secrets](#required-secrets)
 
+**Note:** The project currently has no CI workflows. This skill is a template for creating one.
+
 ## Workflow Layout
 
 ```
@@ -46,7 +48,6 @@ on:
 | `lint` | `npm run lint` | ESLint check |
 | `typecheck` | `tsc --noEmit` | TypeScript type checking |
 | `build` | `npm run build` | Next.js production build |
-| `test` (optional) | `npm run test` | Unit/integration tests |
 
 ### Example workflow
 
@@ -107,14 +108,10 @@ jobs:
 - uses: actions/setup-node@v4
   with:
     node-version: 20
-    cache: 'npm'   # or 'pnpm' for pnpm
+    cache: 'npm'
 ```
 
-The `cache` parameter auto-caches `~/.npm`, `node_modules`, and `pnpm-lock.yaml` hash key.
-
 ## Next.js Build Cache
-
-Next.js produces a `.next/cache` directory that can be cached across CI runs:
 
 ```yaml
 - name: Cache Next.js build

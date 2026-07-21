@@ -1,17 +1,17 @@
 ---
 name: frontend-agent-skills
-description: Skills for the `hub_frontend` assistant: Next.js App Router pages, shadcn/ui components, TanStack Query and Zustand data integration, GitHub Actions CI workflows, and accessible frontend patterns. The coordinator routes requests to single-task agents.
+description: Skills for the `hub_frontend` assistant: Next.js App Router pages, Tailwind CSS components, TanStack Query and Zustand data integration, GitHub Actions CI workflows, and accessible frontend patterns. The coordinator routes requests to single-task agents.
 ---
 
 # Frontend Agent — Skills Catalog
 
-This document describes the skills, inputs/outputs, tools, safety constraints, and example prompts the `frontend-agent` (see `frontend-agent.agent.md`) supports for the `hub_frontend` repository.
+This document describes the skills, inputs/outputs, tools, safety constraints, and example prompts the `frontend-agent` supports for the `hub_frontend` repository.
 
 **Purpose**
 - Provide a compact, discoverable list of the agent's actionable capabilities so maintainers can quickly know what to ask and what to expect.
 
 **Quick summary**
-- **Primary domain:** Next.js 14 App Router web application (React components, Tailwind CSS styling, TanStack Query, Zustand, Axios).
+- **Primary domain:** Next.js 14 App Router web application (React components, Tailwind CSS styling with custom `cixio-*` brand tokens, TanStack Query, Zustand, Axios).
 - **Primary outputs:** repository patches/diffs, new pages and components, TanStack Query hooks, Zustand stores, CI workflow files, and PR-ready descriptions.
 - **Primary safety posture:** Prepare and validate code changes; never autonomously deploy to production or modify live environments without explicit maintainer confirmation.
 
@@ -19,31 +19,34 @@ This document describes the skills, inputs/outputs, tools, safety constraints, a
 
 ### Pages (handled by `frontend-pages` agent)
 - Create or update Next.js App Router pages in `src/app/`
-- Nested layouts, loading states, error boundaries, not-found states
-- Server/client component split, metadata, route groups
+- Existing routes: `(auth)/login/`, `(auth)/register/`, `chat/`, `chat/[sessionId]/`, `documents/`, `todos/`, `poll/`, `queues/`
+- Server/client component split, metadata
 - Page-level forms with React Hook Form and Zod
+- Custom utility CSS classes (`btn-cixio`, `card-cixio`, `input-cixio`)
 
 ### Components (handled by `frontend-components` agent)
 - Create or update reusable UI components in `src/components/`
-- shadcn/ui primitives (existing), feature components per domain
-- Tailwind CSS styling with brand tokens
+- Currently only `NavBar.tsx` exists — new components to be created per domain
+- Tailwind CSS styling with `cixio-*` brand tokens
 - Component props, TypeScript interfaces, accessibility
+- `cn()` utility from `@/lib/utils` for conditional class merging
+- Note: shadcn/ui is NOT used — components are built with plain Tailwind CSS
 
 ### Data Integration (handled by `frontend-data` agent)
-- TanStack React Query hooks (useQuery, useMutation, useInfiniteQuery)
-- Zustand stores for client-side state
-- Axios instance and interceptor configuration
-- TypeScript API types, cache invalidation patterns
+- TanStack React Query hooks (useQuery, useMutation)
+- Zustand stores in `src/store/` with optional `persist` middleware
+- Axios instance in `src/lib/api.ts` with JWT interceptor and token refresh
+- TypeScript API types in `src/types/index.ts`
 
 ### CI/CD Workflows (handled by `frontend-ci` agent)
-- Generate or update GitHub Actions workflows for lint, typecheck, build, test
-- Dependency caching (npm/pnpm) and Next.js build cache
-- Slack notifications on failure
+- Generate GitHub Actions workflows for lint, typecheck, build
+- Dependency caching (npm) and Next.js build cache
 - Docker multi-stage build workflow
+- No CI workflows currently exist — agent creates them from scratch
 
 ### Infrastructure Skills (reusable guides in `.agents/skills/`)
-- `nextjs-page-setup` — App Router page creation with layouts and states
-- `shadcn-ui-component` — Reusable component patterns and brand tokens
+- `nextjs-page-setup` — App Router page creation with actual route listings
+- `shadcn-ui-component` — Reusable component patterns and brand tokens (no shadcn/ui)
 - `api-integration-pattern` — TanStack Query hooks, Zustand stores, Axios
 - `frontend-ci-workflow` — GitHub Actions CI/CD workflow template
 - `react-form-setup` — React Hook Form with Zod validation schemas
@@ -52,13 +55,13 @@ This document describes the skills, inputs/outputs, tools, safety constraints, a
 - `route` — URL path for the page (e.g., `/settings`, `/chat`)
 - `component_name` — name of the component to create or modify
 - `endpoint` — API endpoint to integrate with (e.g., `GET /api/v1/notifications`)
-- `package_manager` — `npm` or `pnpm` (prefer `pnpm` if `pnpm-lock.yaml` is present)
+- `package_manager` — `npm` or `pnpm` (prefer `npm` if `package-lock.json` is present)
 
 ## Outputs the agent produces
 - New or modified page files in `src/app/<route>/`
 - New or modified component files in `src/components/`
-- TanStack Query hooks and Zustand stores in `src/hooks/`
-- Workflow YAML files in `/.github/workflows/`
+- TanStack Query hooks and Zustand stores in `src/store/`
+- Workflow YAML files in `.github/workflows/`
 - README / docs snippets describing required environment variables
 - PR-ready changelog/summary and verification checklist
 - Patches (diffs) applied with agent tools when given explicit permission
@@ -87,7 +90,7 @@ This document describes the skills, inputs/outputs, tools, safety constraints, a
 
 ### Components
 - "Create a `NotificationBell` component with unread badge and dropdown list."
-- "Add a dark mode toggle to the sidebar using Zustand for state."
+- "Add a dark mode toggle to the navbar using Zustand for state."
 
 ### Data Integration
 - "Create a `useNotifications` TanStack Query hook that polls every 30 seconds."
@@ -106,7 +109,6 @@ The coordinator (`frontend-agent`) routes to single-task agents:
 | `frontend-components` | Reusable UI components |
 | `frontend-data` | API hooks, Zustand stores, Axios config |
 | `frontend-ci` | GitHub Actions CI workflows |
-| `frontend-planner` | Implementation planning |
 | `frontend-code-reviewer` | Code review before merge |
 
 ## How progress is reported
@@ -122,4 +124,4 @@ The coordinator (`frontend-agent`) routes to single-task agents:
 ## Maintenance notes
 - Keep `SKILLS.md` aligned with individual agent files and prompts
 - When adding a new skill, create `/.agents/skills/<name>/SKILL.md` and update this catalog
-- When adding a new single-task agent, create the agent file, prompt file, register it in the coordinator's handoffs, and add to `opencode.jsonc`
+- When adding a new single-task agent, create the agent file, prompt file, and register it in the coordinator's handoffs

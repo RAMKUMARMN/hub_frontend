@@ -4,11 +4,8 @@ applyTo: "**/*.ts,**/*.tsx"
 
 # Project coding standards for TypeScript and React
 
-Apply the [general coding guidelines](./general-coding.instructions.md) to all code.
-
 ## TypeScript Guidelines
 - Use TypeScript for all new code
-- Follow functional programming principles where possible
 - Use interfaces for data structures and type definitions
 - Prefer immutable data (const, readonly)
 - Use optional chaining (?.) and nullish coalescing (??) operators
@@ -19,13 +16,16 @@ Apply the [general coding guidelines](./general-coding.instructions.md) to all c
 - Use functional components with hooks
 - Follow the React hooks rules (no conditional hooks)
 - Keep components small and focused — extract reusable logic into custom hooks
-- Use `src/components/ui/` for shadcn/ui primitives (do not modify directly)
-- Place feature components in domain directories (`chat/`, `todos/`, `admin/`)
-- Use Tailwind CSS with project brand tokens (cixio-blue, navy, dark, etc.)
+- Place feature components in domain directories (`chat/`, `todos/`)
+- Use Tailwind CSS with project brand tokens (`cixio-blue`, `cixio-navy`, `cixio-dark`, `cixio-light`, `cixio-bg`, `cixio-hover`, `cixio-muted`)
+- No shadcn/ui — use plain Tailwind CSS with utility classes (`btn-cixio`, `card-cixio`, `input-cixio`)
+- Use `cn()` utility from `@/lib/utils` for conditional class merging
 
 ## API & State Guidelines
 - All API calls go through the shared Axios instance in `src/lib/api.ts`
-- Use Zustand for client-side state and TanStack React Query for server state
+- Use Zustand for client-side state (stores in `src/store/`)
+- Use TanStack React Query for server state
+- Types are defined in `src/types/index.ts`
 - Forms use React Hook Form with Zod validation schemas
 - Environment variables prefixed with `NEXT_PUBLIC_` — never hardcode secrets
 
@@ -40,7 +40,6 @@ This repository uses the following agents:
 | `frontend-components` | `.github/agents/frontend-components.agent.md` | Reusable UI components |
 | `frontend-data` | `.github/agents/frontend-data.agent.md` | API hooks, Zustand stores, Axios config |
 | `frontend-ci` | `.github/agents/frontend-ci.agent.md` | GitHub Actions CI/CD workflows |
-| `frontend-planner` | `.github/agents/frontend-planner.agent.md` | Implementation planning |
 | `frontend-code-reviewer` | `.github/agents/frontend-code-reviewer.agent.md` | Code review before merge |
 
 Prompts are in `.github/prompts/` and skills in `.agents/skills/`.

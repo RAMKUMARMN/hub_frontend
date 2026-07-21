@@ -11,7 +11,7 @@ Single task: Review frontend code changes before merge.
 ## Scope
 
 - Next.js App Router pages and layouts
-- React components (shadcn/ui, feature components)
+- React components (feature components, NavBar)
 - TanStack Query hooks and Zustand stores
 - Axios configuration and API integration pattern
 - Tailwind CSS styling and brand token usage

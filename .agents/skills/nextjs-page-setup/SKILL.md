@@ -20,84 +20,81 @@ metadata:
 
 ```
 src/app/
-├── layout.tsx                  # Root layout (html, body, fonts)
-├── page.tsx                    # Home page
-├── loading.tsx                 # Root loading state
-├── error.tsx                   # Root error boundary
+├── layout.tsx                  # Root layout (html, body, Providers, NavBar)
+├── page.tsx                    # Home page (redirect → /chat)
+├── globals.css                 # Tailwind imports, brand CSS vars, utility classes
+├── providers.tsx               # TanStack QueryClientProvider
 ├── (auth)/                     # Route group — no path segment
 │   ├── login/
-│   │   ├── page.tsx
-│   │   └── login-form.tsx      # Client component
+│   │   └── page.tsx            # Login form (inline — no separate component)
 │   └── register/
-│       └── page.tsx
-├── (dashboard)/
-│   ├── layout.tsx              # Dashboard layout with sidebar
-│   ├── page.tsx                # Dashboard home
-│   ├── settings/
-│   │   ├── page.tsx
-│   │   ├── loading.tsx
-│   │   └── error.tsx
-│   └── admin/
-│       └── page.tsx
-└── api/                        # API routes (if needed)
-    └── ...
+│       └── page.tsx            # Registration form (inline)
+├── chat/
+│   ├── page.tsx                # Chat index (redirect to latest session)
+│   └── [sessionId]/
+│       └── page.tsx            # Chat session with SSE streaming
+├── documents/
+│   └── page.tsx                # Document upload and management
+├── todos/
+│   └── page.tsx                # Todo list with CRUD
+├── poll/
+│   └── page.tsx                # Internship pulse check poll
+└── queues/
+    └── page.tsx                # Queue monitoring dashboard
 ```
 
 ## Server vs Client Components
 
 | Criteria | Server Component | Client Component |
 |---|---|---|
-| Data fetching | Direct `async` component, fetch | TanStack Query in `useEffect` |
+| Data fetching | Direct `async` component, fetch | TanStack Query |
 | Interactivity | None | useState, event handlers |
 | Hooks | None | All React hooks |
 | Browser APIs | None | localStorage, window, etc. |
 | `"use client"` | Not needed | Required at top of file |
 
-Default to server components. Move to client only when interactivity is needed. Keep client components as leaf nodes in the tree.
+Default to server components. Move to client only when interactivity is needed.
 
 ## Layout Patterns
 
 ### Root layout (`src/app/layout.tsx`)
 
 ```tsx
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
+import type { Metadata } from "next";
+import "./globals.css";
+import Providers from "./providers";
+import NavBar from "@/components/NavBar";
 
 export const metadata: Metadata = {
-  title: 'Hub Frontend',
-  description: 'Hub frontend application',
-}
+  title: "CixioHub — AI Platform for TKM",
+  description: "AI-powered chat platform for TKM students",
+  icons: { icon: "/cixio-icon.svg", apple: "/cixio-icon.png" },
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className="min-h-screen bg-cixio-bg">
+        <Providers>
+          <NavBar />
+          <div className="pt-14">{children}</div>
+        </Providers>
+      </body>
     </html>
-  )
+  );
 }
 ```
 
-### Nested layout (`src/app/(dashboard)/layout.tsx`)
+### Providers (`src/app/providers.tsx`)
 
 ```tsx
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
-    </div>
-  )
+"use client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+
+export default function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient());
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 ```
 
@@ -106,11 +103,10 @@ export default function DashboardLayout({
 ### Loading (`loading.tsx`)
 
 ```tsx
-export default function SettingsLoading() {
+export default function PageLoading() {
   return (
-    <div className="space-y-4 animate-pulse">
-      <div className="h-8 w-48 bg-muted rounded" />
-      <div className="h-64 bg-muted rounded" />
+    <div className="flex h-screen items-center justify-center">
+      <p className="text-gray-400">Loading...</p>
     </div>
   )
 }
@@ -121,7 +117,7 @@ export default function SettingsLoading() {
 ```tsx
 'use client'
 
-export default function SettingsError({
+export default function PageError({
   error,
   reset,
 }: {
@@ -131,8 +127,8 @@ export default function SettingsError({
   return (
     <div className="flex flex-col items-center justify-center gap-4 p-8">
       <h2 className="text-lg font-semibold">Something went wrong</h2>
-      <p className="text-muted-foreground">{error.message}</p>
-      <button onClick={() => reset()}>Try again</button>
+      <p className="text-gray-500">{error.message}</p>
+      <button onClick={() => reset()} className="btn-cixio">Try again</button>
     </div>
   )
 }
@@ -144,19 +140,26 @@ export default function SettingsError({
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Settings',
-  description: 'Manage your account settings and preferences',
+  title: 'Page Title',
+  description: 'Page description',
 }
 ```
 
-For dynamic metadata, use `generateMetadata`:
+## Brand Tokens
 
-```tsx
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const user = await fetchUser(params.id)
-  return { title: `${user.name} — Settings` }
-}
-```
+Use these Tailwind CSS brand tokens for all styling:
+
+| Token | CSS Variable | Usage |
+|---|---|---|
+| `cixio-blue` | `--cixio-blue` | Primary actions, links, active states |
+| `cixio-navy` | `--cixio-navy` | Headers, navigation, secondary elements |
+| `cixio-dark` | `--cixio-dark` | Text, icons on light backgrounds |
+| `cixio-light` | `--cixio-light` | Backgrounds, cards |
+| `cixio-bg` | `--cixio-bg` | Page background |
+| `cixio-hover` | `--cixio-hover` | Hover state backgrounds |
+| `cixio-muted` | `--cixio-muted` | Secondary text, disabled states, borders |
+
+Utility classes available in `globals.css`: `btn-cixio`, `card-cixio`, `input-cixio`.
 
 ## Verification
 
@@ -164,5 +167,3 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 2. `tsc --noEmit` — TypeScript types are correct
 3. `npm run build` — production build succeeds
 4. Navigate to the route in the browser
-5. Test loading state with slow network (DevTools → Network → Slow 3G)
-6. Test error state with incorrect data

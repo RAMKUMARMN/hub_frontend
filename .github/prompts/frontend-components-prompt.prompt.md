@@ -2,23 +2,24 @@
 mode: agent
 agent: frontend-components
 name: frontend-components-prompt
-description: "Prompt for the frontend-components agent. Creates or updates reusable UI components using shadcn/ui primitives, Tailwind CSS, and TypeScript."
+description: "Prompt for the frontend-components agent. Creates or updates reusable UI components using Tailwind CSS, TypeScript, and brand tokens."
 ---
 
 ### Requirements
 
-1. **Component Structure:** Place feature components in domain directories (`chat/`, `todos/`, `admin/`, `settings/`). Use `src/components/ui/` for shadcn/ui primitives.
+1. **Component Structure:** Place feature components in domain directories (`chat/`, `todos/`, `settings/`). Currently only `NavBar.tsx` exists in `src/components/`.
 2. **Props Interface:** Export a TypeScript interface for all component props. Use `interface` not `type` for consistency.
-3. **Styling:** Use Tailwind CSS with brand tokens (`cixio-blue`, `navy`, `dark`, `light`, `bg`, `hover`, `muted`). Avoid inline styles.
+3. **Styling:** Use Tailwind CSS with brand tokens (`cixio-blue`, `cixio-navy`, `cixio-dark`, `cixio-light`, `cixio-bg`, `cixio-hover`, `cixio-muted`). Avoid inline styles.
 4. **Accessibility:** Semantic HTML, ARIA labels where needed, keyboard navigation support.
-5. **State:** Use Zustand for shared client state. Use TanStack Query for server state. Do not use raw `useState` for cross-component state.
+5. **State:** Use Zustand for shared client state. Use TanStack Query for server state.
 
 ### Constraints
 
 - TypeScript — all components must have typed props
-- Do not modify existing shadcn/ui primitives in `src/components/ui/`
-- Follow existing component patterns in the codebase for consistency
-- Use `cn()` utility from `shadcn/ui` for conditional class merging
+- No shadcn/ui — the project does not use `@radix-ui/*` or shadcn primitives
+- Follow existing component patterns (NavBar.tsx) for consistency
+- Use `cn()` utility from `@/lib/utils` for conditional class merging
+- Use existing utility classes (`btn-cixio`, `card-cixio`, `input-cixio`) where applicable
 
 ### Success Criteria
 
@@ -26,7 +27,7 @@ description: "Prompt for the frontend-components agent. Creates or updates reusa
 - Props are properly typed with sensible defaults
 - Component is accessible (keyboard navigable, screen reader friendly)
 - Styling uses brand tokens correctly
-- Works in both light and dark mode
+- `tsc --noEmit` passes
 
 ### Usage Template
 
@@ -45,7 +46,6 @@ Show the diff and wait for my confirmation before applying.
 User: Create a NotificationBell component in src/components/chat/.
 - Shows unread count badge on a bell icon
 - Dropdown list of recent notifications on click
-- Uses shadcn/ui Popover
 - Uses TanStack Query hook for fetching notifications
 - Zustand store for unread count state
 ```

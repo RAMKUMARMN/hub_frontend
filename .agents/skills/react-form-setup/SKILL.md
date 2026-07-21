@@ -12,18 +12,16 @@ metadata:
 - [Setup](#setup)
 - [Form Template](#form-template)
 - [Zod Schema](#zod-schema)
-- [Reusable Form Fields](#reusable-form-fields)
 - [Error Display](#error-display)
 - [API Integration](#api-integration)
 - [Verification](#verification)
 
 ## Setup
 
-Ensure the required packages are installed:
-
-```bash
-npm install react-hook-form @hookform/resolvers zod
-```
+Required packages are already installed:
+- `react-hook-form`
+- `@hookform/resolvers`
+- `zod`
 
 ## Form Template
 
@@ -33,74 +31,53 @@ npm install react-hook-form @hookform/resolvers zod
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import api from '@/lib/api'
 
-const settingsSchema = z.object({
+const schema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  notifications: z.object({
-    email: z.boolean(),
-    push: z.boolean(),
-    sms: z.boolean(),
-  }),
 })
 
-type SettingsFormData = z.infer<typeof settingsSchema>
+type FormData = z.infer<typeof schema>
 
-interface SettingsFormProps {
-  defaultValues?: Partial<SettingsFormData>
-  onSubmit: (data: SettingsFormData) => Promise<void>
-}
-
-export function SettingsForm({ defaultValues, onSubmit }: SettingsFormProps) {
+export default function SettingsForm() {
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SettingsFormData>({
-    resolver: zodResolver(settingsSchema),
-    defaultValues,
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
   })
 
+  const onSubmit = async (data: FormData) => {
+    try {
+      await api.put('/users/me', data)
+    } catch (err) {
+      console.error('Failed to save', err)
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="displayName">Display Name</Label>
-        <Input id="displayName" {...register('displayName')} />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">Display Name</label>
+        <input {...register('displayName')} className="input-cixio" />
         {errors.displayName && (
-          <p className="text-sm text-red-500">{errors.displayName.message}</p>
+          <p className="text-red-500 text-xs mt-1">{errors.displayName.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" {...register('email')} />
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">Email</label>
+        <input type="email" {...register('email')} className="input-cixio" />
         {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
+          <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
         )}
       </div>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Notification Preferences</legend>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" {...register('notifications.email')} />
-          Email notifications
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" {...register('notifications.push')} />
-          Push notifications
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" {...register('notifications.sms')} />
-          SMS notifications
-        </label>
-      </fieldset>
-
-      <Button type="submit" disabled={isSubmitting}>
+      <button type="submit" disabled={isSubmitting} className="btn-cixio">
         {isSubmitting ? 'Saving...' : 'Save Changes'}
-      </Button>
+      </button>
     </form>
   )
 }
@@ -108,56 +85,51 @@ export function SettingsForm({ defaultValues, onSubmit }: SettingsFormProps) {
 
 ## Zod Schema
 
-Define schemas co-located with the form or in `src/lib/schemas/` if shared:
+Define schemas co-located with the page (or in `src/lib/schemas/` if shared):
 
 ```tsx
 import { z } from 'zod'
 
-export const settingsSchema = z.object({
+export const schema = z.object({
   displayName: z
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must be 50 characters or less'),
   email: z.string().email('Invalid email address'),
-  notifications: z.object({
-    email: z.boolean(),
-    push: z.boolean(),
-    sms: z.boolean(),
-  }),
 })
 ```
 
-## Reusable Form Fields
-
-For frequently used field patterns, create a wrapper:
+For password confirmation, use `.refine()`:
 
 ```tsx
-interface FormFieldProps {
-  label: string
-  error?: string
-  children: React.ReactNode
-}
-
-export function FormField({ label, error, children }: FormFieldProps) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      {children}
-      {error && <p className="text-sm text-red-500">{error}</p>}
-    </div>
-  )
-}
+const schema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirm_password: z.string(),
+  })
+  .refine((d) => d.password === d.confirm_password, {
+    message: 'Passwords do not match',
+    path: ['confirm_password'],
+  })
 ```
 
 ## Error Display
 
-Errors are displayed inline below each field. Use a consistent pattern:
+Errors are displayed inline below each field using the existing pattern:
 
 ```tsx
 {errors.fieldName && (
-  <p className="text-sm text-red-500" role="alert">
-    {errors.fieldName.message}
-  </p>
+  <p className="text-red-500 text-xs mt-1">{errors.fieldName.message}</p>
+)}
+```
+
+For form-level errors:
+
+```tsx
+{error && (
+  <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+    <p className="text-red-600 text-sm">{error}</p>
+  </div>
 )}
 ```
 
@@ -166,19 +138,19 @@ Errors are displayed inline below each field. Use a consistent pattern:
 Submit form data via the shared Axios instance:
 
 ```tsx
-const { mutateAsync: updateSettings, isPending } = useMutation({
-  mutationFn: async (data: SettingsFormData) => {
-    const response = await api.put('/api/v1/users/me', data)
-    return response.data
-  },
-  onSuccess: () => {
-    toast.success('Settings saved')
-    queryClient.invalidateQueries({ queryKey: ['user'] })
-  },
-  onError: (err) => {
-    toast.error('Failed to save settings')
-  },
-})
+import api from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
+
+const onSubmit = async (data: FormData) => {
+  try {
+    await api.put('/users/me', data)
+  } catch (err) {
+    const message =
+      (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
+      'Save failed'
+    setError(message)
+  }
+}
 ```
 
 ## Verification
@@ -187,5 +159,4 @@ const { mutateAsync: updateSettings, isPending } = useMutation({
 2. Validation errors appear on invalid input
 3. Submit calls the API with correct data shape
 4. Loading state disables the submit button
-5. Success/error feedback is shown to the user
-6. `tsc --noEmit` passes
+5. `tsc --noEmit` passes

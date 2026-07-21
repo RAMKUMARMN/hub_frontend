@@ -250,7 +250,8 @@ Frontend agents help with code architecture, MCP tooling, and plugin development
 
 | Agent | When to use | Example prompt |
 |---|---|---|
-| `@frontend-architect` | Audit `"use client"` boundaries, flag Server Component import violations, suggest component extraction into `components/client/` or `components/server/` | "Audit the frontend for use client boundaries and extractable inline logic" |
+| `@frontend-boundary-auditor` | Audit `"use client"` boundaries, flag Server Component import violations, suggest component extraction | "Audit the frontend for use client boundaries and extractable inline logic" |
+| `@frontend-architect` | Design page/component trees, route layouts, and data flow for new features | "Design the architecture for a Settings page with profile and preferences tabs" |
 | `@frontend-web-vitals` | Audit accessibility, image optimization, and layout shift risks to improve Core Web Vitals | "Check for layout shift risks in the chat interface" |
 | `@frontend-mcp` | Create or manage MCP discovery tools and server registration | "Add an MCP tool for listing chat sessions" |
 | `@frontend-plugin` | Develop the plugin system — skills, hooks, rules, agent definitions | "Create a new plugin skill for file upload" |

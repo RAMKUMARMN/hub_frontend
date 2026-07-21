@@ -2,94 +2,96 @@
 mode: agent
 agent: frontend-architect
 name: frontend-architect-prompt
-description: "Prompt for the frontend-architect agent. Scans all `.tsx` files in `src/app/` and `src/components/` for `\"use client\"` boundary violations, Server Component import leaks, and component extraction opportunities."
+description: "Prompt for the frontend-architect agent. Designs page/component trees, route layouts, data flow, and file organization for new features. Produces architecture plans and hands off implementation to domain-specific agents."
 ---
 
 ### Requirements
 
-1. **Scan all `.tsx` files** in the `scan_path` (default `src/`). For each file, read its full content.
+1. **Understand the feature:** Read the feature description and any existing related files (route files, stores, components) to understand the current state.
 
-2. **Check 1 — Unnecessary `"use client":`** If a file has `"use client"` at the top, check if it actually uses any client features:
-   - React hooks (`useState`, `useEffect`, `useContext`, `useRef`, `useCallback`, `useMemo`, `useReducer`)
-   - Browser APIs (`window`, `document`, `localStorage`, `addEventListener`)
-   - Client-only libraries (`useForm` from react-hook-form, `useAuthStore` from zustand, `useQuery` from @tanstack/react-query)
-   - Event handlers (`onClick`, `onSubmit`, `onChange` — in JSX)
-   If none of these are found, flag as **warning** — `"use client"` may be unnecessary.
+2. **Design the route structure:**
+   - Determine the page location in `src/app/`
+   - Use route groups (`(auth)`) and dynamic segments (`[sessionId]`) where appropriate
+   - Plan loading, error, and layout files
 
-3. **Check 2 — Server Component import leak:** For files that do NOT have `"use client"`, scan imports for:
-   - `zustand` (e.g., `from "@/store/authStore"`)
-   - `react-hook-form` or `@hookform/resolvers`
-   - `framer-motion`
-   - `react-hot-toast`
-   - `react-markdown`, `remark-gfm`, `rehype-highlight`, `highlight.js`
-   - `@tanstack/react-query`
-   If found, flag as **critical** — Server Component importing client-only code.
+3. **Design the component tree:**
+   - Identify shared components → place in `src/components/`
+   - Identify page-specific helpers → co-locate inline in the page file
+   - Define parent-child layout and props interface
 
-4. **Check 3 — Inline page logic:** For each `page.tsx` file, count the total lines. If > `min_inline_lines` (default 100), flag as **suggestion** and propose component names to extract based on the JSX structure (e.g., `<div className="chat">` → `ChatWindow`, `<form>` → `ChatInput`).
+4. **Design data flow:**
+   - Server data (API calls) → TanStack React Query hooks
+   - Global client state → Zustand store in `src/store/`
+   - Local UI state → `useState` / `useReducer`
+   - Auth state → existing `useAuthStore`
 
-5. **Check 4 — Directory placement:** Check if files with `"use client"` are grouped under a `client/` subdirectory. If not, suggest creating `src/components/client/` and `src/components/server/` and list which files should move.
-
-6. **Check 5 — Server-to-Client direct import:** In non-client files, check if they import any `.tsx` file that has `"use client"`. If found, flag as **warning** and suggest using the `children` prop pattern or wrapping pattern.
-
-7. **Check 7 — Missing `"use client":`** In files without the directive, check if they use hooks (`useState`, `useEffect`, etc.), event handlers, or browser APIs. If found, flag as **critical**.
+5. **Produce the architecture plan:**
+   - File tree of new/modified files
+   - Component hierarchy (text-based tree)
+   - Data flow description
+   - Implementation checklist grouped by agent handoff
 
 ### Constraints
 
 - Read-only — never modify any file
-- Report using the structured output format below
-- Use exact file paths relative to `src/` in all findings
+- Reference existing project conventions from the agent definition
+- When the plan requires implementation, specify which agent to hand off to
 
 ### Success Criteria
 
-- Every `.tsx` file in the scan path is checked
-- Findings are grouped by severity (critical → warning → suggestion → info)
-- Each finding includes file path, line number, current state, and recommendation
-- Component extraction suggestions include specific component names based on file content
-- Total line counts are included for inline extraction candidates
+- Plan includes exact file paths following project conventions
+- Component hierarchy shows parent-child relationships
+- Data flow clearly distinguishes server vs client state
+- Implementation checklist is ordered and actionable
+- Decisions include rationale (e.g., "Zustand store because this state is shared across routes")
 
 ### Output Format
 
 ```
-## Architecture Audit — {scan_path}
+## Architecture Plan — {feature}
 
-### Critical (must fix)
-{n}. [{file:line}] {description}
-    → {recommendation}
+### Route Structure
+- `src/app/settings/page.tsx` — main settings page
+- `src/app/settings/layout.tsx` — settings sidebar layout
 
-### Warnings (should fix)
-...
+### Component Hierarchy
+```
+<SettingsLayout>
+  <SettingsNav />       {/* shared, src/components/SettingsNav.tsx */}
+  <ProfileForm />       {/* inline in page */}
+  <NotificationForm />  {/* inline in page */}
+</SettingsLayout>
+```
 
-### Suggestions (nice to have)
-...
+### Data Flow
+- User profile → React Query (`useQuery('/users/me')`)
+- Form state → React Hook Form (local)
+- Theme preference → Zustand store (`useSettingsStore`)
 
-### Component Extraction Candidates
-| File | Lines | Suggested Components |
-|---|---|---|
-| src/app/chat/[sessionId]/page.tsx | ~280 | ChatWindow, MessageBubble, ChatInput |
-
-### Summary
-- {n} files scanned
-- {n} critical, {n} warnings, {n} suggestions
-- {n} component extraction candidates
+### Implementation Checklist
+1. [frontend-pages] Create `src/app/settings/layout.tsx`
+2. [frontend-components] Create `src/components/SettingsNav.tsx`
+3. [frontend-pages] Create `src/app/settings/page.tsx`
+4. [frontend-data] Add `useSettingsStore` to `src/store/settingsStore.ts`
 ```
 
 ### Usage Template
 
 ```
-Run an architecture audit on {scan_path}.
-{Optional: custom min_inline_lines, report_format}
-Show the report and wait for my review.
+Architect the frontend for: {feature description}.
+Focus on route structure, component tree, and data flow.
+{Optional: reference existing patterns or constraints}
 ```
 
 ### Chat Example
 
 ```
-User: Audit the frontend for "use client" issues and find files that need component extraction.
-```
+User: Design the architecture for a document approval workflow. Users submit documents, reviewers approve/reject, and admins see a dashboard.
 
 Agent (expected):
-- Scans all `.tsx` files in `src/` recursively
-- Checks each file for the 7 audit criteria
-- Produces a structured report with findings by severity
-- Lists component extraction candidates with suggested names
-- Waits for user to review the report
+- Analyses requirements
+- Proposes routes: /documents/submit, /documents/review, /admin/documents
+- Designs component hierarchy
+- Defines data flow (React Query for lists, Zustand for filter state)
+- Produces implementation checklist grouped by agent
+```

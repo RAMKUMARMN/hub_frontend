@@ -12,16 +12,13 @@ Single task: Audit the Next.js 14 app for accessibility, image optimization, and
 
 - `src/app/**/*.tsx` — all page and layout files
 - `src/components/**/*.tsx` — all component files
-- `src/lib/**/*.tsx` — shared client code
 - `public/` — static image assets
 - `next.config.js` — image optimization configuration
 
 ## Out of scope
 
 This agent does NOT handle:
-- `"use client"` boundary auditing → use `frontend-architect`
-- MCP server tool creation → use `frontend-mcp`
-- Plugin system development → use `frontend-plugin`
+- `"use client"` boundary auditing → use `frontend-boundary-auditor`
 - Bundle size or code-splitting analysis
 - Server-side performance (API latency, DB queries)
 

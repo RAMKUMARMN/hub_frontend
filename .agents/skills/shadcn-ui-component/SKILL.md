@@ -1,12 +1,12 @@
 ---
 name: shadcn-ui-component
-description: Create reusable UI components using shadcn/ui primitives, Tailwind CSS, and TypeScript. Follow the project's brand tokens and accessibility patterns.
+description: Create reusable UI components using Tailwind CSS, TypeScript, and brand tokens. Note: shadcn/ui is NOT used in this project — components are built with plain Tailwind CSS.
 metadata:
   model: models/gemini-3.1-pro-preview
   last_modified: Mon, 29 Jun 2026 00:00:00 GMT
 ---
 
-# Creating shadcn/ui Components
+# Creating UI Components
 
 ## Contents
 - [Directory Layout](#directory-layout)
@@ -14,31 +14,21 @@ metadata:
 - [Brand Tokens](#brand-tokens)
 - [Accessibility](#accessibility)
 - [cn() Utility](#cn-utility)
+- [Existing Utility Classes](#existing-utility-classes)
 - [Verification](#verification)
+
+## Important Note
+
+This project does NOT use shadcn/ui. There are no `@radix-ui/*` packages, no `components/ui/` directory, and no shadcn primitives. All components are built with plain Tailwind CSS using the custom `cixio-*` brand tokens.
 
 ## Directory Layout
 
 ```
 src/components/
-├── ui/                         # shadcn/ui primitives (do not modify)
-│   ├── button.tsx
-│   ├── dialog.tsx
-│   ├── popover.tsx
-│   ├── dropdown-menu.tsx
-│   └── ...
-├── chat/                       # Chat feature components
-│   ├── chat-message.tsx
-│   ├── chat-input.tsx
-│   ├── notification-bell.tsx
-│   └── ...
-├── todos/                      # Todos feature components
-│   ├── todo-list.tsx
-│   ├── todo-item.tsx
-│   └── ...
-├── admin/                      # Admin feature components
-│   └── ...
-└── settings/                   # Settings feature components
-    └── ...
+├── NavBar.tsx                   # Shared navigation (currently the only component)
+├── chat/                        # Chat feature components (to be created)
+├── todos/                       # Todos feature components (to be created)
+└── settings/                    # Settings feature components (to be created)
 ```
 
 ## Component Template
@@ -62,7 +52,7 @@ export function NotificationBell({
       onClick={onBellClick}
       className={cn(
         'relative rounded-full p-2 transition-colors',
-        'hover:bg-hover focus:outline-none focus:ring-2 focus:ring-cixio-blue',
+        'hover:bg-cixio-hover focus:outline-none focus:ring-2 focus:ring-cixio-blue',
         className
       )}
       aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
@@ -85,12 +75,14 @@ Use these Tailwind CSS brand tokens throughout the project:
 | Token | CSS Variable | Usage |
 |---|---|---|
 | `cixio-blue` | `--cixio-blue` | Primary actions, links, active states |
-| `navy` | `--navy` | Headers, navigation, secondary elements |
-| `dark` | `--dark` | Text, icons on light backgrounds |
-| `light` | `--light` | Backgrounds, cards |
-| `bg` | `--bg` | Page background |
-| `hover` | `--hover` | Hover state backgrounds |
-| `muted` | `--muted` | Secondary text, disabled states, borders |
+| `cixio-navy` | `--cixio-navy` | Headers, navigation, secondary elements |
+| `cixio-dark` | `--cixio-dark` | Text, icons on light backgrounds |
+| `cixio-light` | `--cixio-light` | Backgrounds, cards |
+| `cixio-bg` | `--cixio-bg` | Page background |
+| `cixio-hover` | `--cixio-hover` | Hover state backgrounds |
+| `cixio-muted` | `--cixio-muted` | Secondary text, disabled states, borders |
+
+All tokens use the `cixio-` prefix, e.g.: `bg-cixio-blue`, `text-cixio-dark`, `hover:bg-cixio-hover`, `border-cixio-muted`.
 
 ## Accessibility
 
@@ -114,11 +106,22 @@ className={cn('base-class', variant === 'primary' && 'bg-cixio-blue', className)
 className={`base-class ${variant === 'primary' ? 'bg-cixio-blue' : ''} ${className}`}
 ```
 
+## Existing Utility Classes
+
+The project defines these reusable utility classes in `src/app/globals.css`:
+
+| Class | Purpose |
+|---|---|
+| `btn-cixio` | Primary button with hover, focus, and disabled states |
+| `card-cixio` | Card container with border and shadow |
+| `input-cixio` | Form input with focus ring and border |
+
+Use these for consistency across the application.
+
 ## Verification
 
 1. Component renders without errors
 2. Props are properly typed
-3. Works in light and dark mode
-4. Keyboard navigable with visible focus ring
-5. Screen reader announces interactive elements
-6. `tsc --noEmit` passes
+3. Keyboard navigable with visible focus ring
+4. Screen reader announces interactive elements
+5. `tsc --noEmit` passes

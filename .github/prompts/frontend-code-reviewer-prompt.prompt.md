@@ -58,7 +58,7 @@ Context: [feature purpose, related components]
 ### Chat Example
 
 ```
-User: Review src/app/chat/page.tsx and src/hooks/queries/useChatMessages.ts for correctness and performance.
+User: Review src/app/chat/page.tsx and src/lib/api.ts for correctness and performance.
 ```
 
 Agent (expected):

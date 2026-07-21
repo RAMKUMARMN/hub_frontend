@@ -6,14 +6,14 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 # Frontend Data Agent
 
-Single task: Set up API client configuration, TanStack React Query hooks, Zustand stores, and data fetching patterns in `src/lib/` and `src/hooks/`.
+Single task: Set up API client configuration, TanStack React Query hooks, Zustand stores, and data fetching patterns.
 
 ## Scope
 
-- `src/lib/api.ts` — Axios instance with JWT interceptor, base URL, error handling
-- `src/hooks/queries/` — TanStack React Query hooks (useQuery, useMutation, useInfiniteQuery)
-- `src/hooks/stores/` — Zustand stores for client-side state
-- `src/lib/` — utility functions, API types, constants
+- `src/lib/api.ts` — Axios instance with JWT interceptor, token refresh, base URL, error handling
+- `src/store/authStore.ts` — Zustand store for auth state (with persist middleware)
+- `src/types/index.ts` — TypeScript interfaces for API types (`User`, `ChatSession`, `ChatMessage`, `Document`, `Todo`, `TokenResponse`, `NotificationJob`)
+- TanStack Query hooks (co-located with pages or in dedicated files)
 - Environment variables (`NEXT_PUBLIC_*`)
 
 ## Out of scope
@@ -22,7 +22,7 @@ This agent does NOT handle:
 - Pages or layouts → use `frontend-pages`
 - UI components → use `frontend-components`
 - CI workflows → use `frontend-ci`
-- Planning or review → use `frontend-planner` or `frontend-code-reviewer`
+- Review → use `frontend-code-reviewer`
 
 ## Inputs
 
@@ -33,10 +33,19 @@ This agent does NOT handle:
 
 ## Outputs
 
-- New or updated query hooks in `src/hooks/queries/`
-- New or updated Zustand stores in `src/hooks/stores/`
+- New or updated query hooks (TanStack Query v5 object syntax)
+- New or updated Zustand stores in `src/store/`
 - Axios instance configuration updates
-- TypeScript interfaces for API response types
+- TypeScript interfaces in `src/types/index.ts`
+
+## Notes
+
+- Stores live in `src/store/` (not `src/hooks/stores/`)
+- Query hooks are co-located with pages or placed in `src/hooks/` if shared
+- Types are in `src/types/index.ts` (not `src/lib/types/`)
+- The Axios instance base URL is `${NEXT_PUBLIC_API_URL}/api/v1`
+- Auth store uses `persist` middleware with `auth-storage` key
+- Response interceptor handles 401 with automatic token refresh
 
 ## Example prompts
 

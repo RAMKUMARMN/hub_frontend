@@ -7,17 +7,17 @@ description: "Prompt for the frontend-data agent. Configures API client, creates
 
 ### Requirements
 
-1. **Axios Client:** All API calls go through the shared Axios instance in `src/lib/api.ts`. It has a JWT auth interceptor — add request/response interceptors as needed.
-2. **React Query Hooks:** Place query hooks in `src/hooks/queries/`. Export named hooks like `useNotifications`, `useUsers`, `useCreateTodo`. Follow TanStack Query v5 patterns (object syntax).
-3. **Zustand Stores:** Place stores in `src/hooks/stores/`. Use the existing pattern with `create()` and optional `persist` middleware. Keep stores flat and focused.
-4. **TypeScript Interfaces:** Define API response types in `src/lib/types/` or co-locate with the hook file. Use `interface` for object types.
+1. **Axios Client:** All API calls go through the shared Axios instance in `src/lib/api.ts`. It has a JWT auth interceptor with automatic token refresh on 401.
+2. **React Query Hooks:** Use TanStack Query v5 object syntax. Co-locate hooks with pages or place in dedicated files. Export named hooks like `useNotifications`, `useTodos`.
+3. **Zustand Stores:** Place stores in `src/store/` (not `src/hooks/stores/`). Use the existing pattern with `create()` and optional `persist` middleware. Current store: `src/store/authStore.ts`.
+4. **TypeScript Interfaces:** Define API response types in `src/types/index.ts` (not `src/lib/types/`). Use `interface` for object types.
 
 ### Constraints
 
 - All API calls use the Axios instance — never raw `fetch`
 - Sensitive data (auth tokens, user secrets) must not appear in query keys or logs
 - Use `staleTime` and `gcTime` (formerly `cacheTime`) for cache control
-- For mutations, provide `onSuccess`/`onError` callbacks that integrate with existing toast/notification patterns
+- For mutations, provide `onSuccess`/`onError` callbacks
 
 ### Success Criteria
 
@@ -25,7 +25,7 @@ description: "Prompt for the frontend-data agent. Configures API client, creates
 - Mutations invalidate related queries on success
 - Zustand store updates trigger re-renders in subscribed components
 - Loading and error states are exposed by the hook
-- Axios interceptor handles 401 by redirecting to login
+- Axios interceptor handles 401 by attempting token refresh, then redirecting to login
 
 ### Usage Template
 
@@ -50,6 +50,6 @@ User: Create a useNotifications query hook.
 ```
 
 Agent (expected):
-- Creates hooks/queries/useNotifications.ts with typed return
-- Creates the Notification interface
+- Creates the query hook file with typed return
+- Creates the Notification interface in src/types/index.ts
 - Shows the diff and waits for confirmation before applying

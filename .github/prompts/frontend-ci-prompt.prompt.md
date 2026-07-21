@@ -9,7 +9,7 @@ description: "Prompt for the frontend-ci agent. Creates and updates GitHub Actio
 
 1. **Workflow Triggers:** Push to `main`, pull requests, and `workflow_dispatch` with optional environment input.
 2. **Jobs:** `lint` (`npm run lint`), `typecheck` (`tsc --noEmit`), `build` (`npm run build`). Optionally include `test` and `bundle-analysis`.
-3. **Caching:** npm/pnpm dependency caching and Next.js build cache (`.next/cache`).
+3. **Caching:** npm dependency caching and Next.js build cache (`.next/cache`).
 4. **Node Version:** Use Node.js 20 (LTS). Support configurable version via input.
 5. **Environment Variables:** Set `NEXT_PUBLIC_API_URL` and other public env vars from GitHub Secrets.
 6. **Notifications:** Optional Slack notification on failure via `SLACK_WEBHOOK_URL`.
@@ -20,6 +20,7 @@ description: "Prompt for the frontend-ci agent. Creates and updates GitHub Actio
 - Use `actions/setup-node@v4` for Node.js setup
 - Use `actions/cache@v4` for dependency and build caching
 - Secrets referenced as `${{ secrets.SECRET_NAME }}` — never hardcode values
+- No CI workflows currently exist — create from scratch
 
 ### Success Criteria
 
@@ -27,7 +28,6 @@ description: "Prompt for the frontend-ci agent. Creates and updates GitHub Actio
 - All three core jobs (lint, typecheck, build) pass
 - Cache is restored and saved correctly
 - Notifications fire on failure if configured
-- README snippet documents required secrets
 
 ### Usage Template
 
@@ -44,7 +44,7 @@ Show the diff and wait for my confirmation before applying.
 
 ```
 User: Create a frontend-ci.yml workflow for lint, typecheck, build.
-- Use pnpm
+- Use npm
 - Node 20
 - Cache dependencies and Next.js build
 - Slack notifications on failure via SLACK_WEBHOOK_URL
