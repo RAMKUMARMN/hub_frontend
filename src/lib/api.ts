@@ -22,6 +22,16 @@ export const buildApiUrl = (path: string) => {
   return relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
 };
 
+export const getMediaUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
+    return path;
+  }
+  const backendHost = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${backendHost}${normalizedPath}`;
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },

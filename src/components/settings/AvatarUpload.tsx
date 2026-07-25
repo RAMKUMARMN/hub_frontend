@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
-import api, { buildApiUrl } from "@/lib/api";
+import { useState, useRef, useEffect } from "react";
+import api, { buildApiUrl, getMediaUrl } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 
 type Props = {
   currentPhotoUrl?: string | null;   // existing photo from the database, if any
@@ -10,9 +11,13 @@ type Props = {
 
 export default function AvatarUpload({ currentPhotoUrl, userInitials }: Props) {
   // previewUrl = what we show on screen RIGHT NOW (instant feedback)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(currentPhotoUrl ?? null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(getMediaUrl(currentPhotoUrl) ?? null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setPreviewUrl(getMediaUrl(currentPhotoUrl));
+  }, [currentPhotoUrl]);
 
   // Step 1: user picks a file → show instant preview using FileReader
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -48,11 +53,19 @@ export default function AvatarUpload({ currentPhotoUrl, userInitials }: Props) {
     formData.append("file", file);
 
     try {
-      const res = await api.post(buildApiUrl("/auth/avatar"), formData);
-      setPreviewUrl(res.data.avatar_url ?? null); // replace local preview with the real saved URL
+      const res = await api.post(buildApiUrl("/auth/avatar"), formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      const updatedUser = res.data;
+      if (updatedUser) {
+        useAuthStore.getState().setUser(updatedUser);
+        setPreviewUrl(getMediaUrl(updatedUser.avatar_url));
+      }
     } catch (err) {
       alert("Upload failed, please try again");
-      setPreviewUrl(currentPhotoUrl ?? null); // revert on failure
+      setPreviewUrl(getMediaUrl(currentPhotoUrl) ?? null); // revert on failure
     } finally {
       setUploading(false);
     }
@@ -64,7 +77,10 @@ export default function AvatarUpload({ currentPhotoUrl, userInitials }: Props) {
     setPreviewUrl(null);
 
     try {
-      await api.delete(buildApiUrl("/auth/avatar"));
+      const res = await api.delete(buildApiUrl("/auth/avatar"));
+      if (res.data) {
+        useAuthStore.getState().setUser(res.data);
+      }
     } catch (err) {
       alert("Could not remove avatar on server");
       setPreviewUrl(prev);

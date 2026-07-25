@@ -4,6 +4,8 @@
 // "use client" required — uses useState and setInterval.
 
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 // The three modes and their durations in seconds
 const MODES = {
@@ -19,9 +21,68 @@ export default function FocusTimer() {
   const [seconds, setSeconds] = useState(MODES.work.seconds);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0); // completed work sessions
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  // useRef holds the interval ID so we can clear it
+  const queryClient = useQueryClient();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionRef = useRef<string | null>(null);
+  sessionRef.current = currentSessionId;
+
+  const startOrResumeSession = async () => {
+    try {
+      if (!sessionRef.current) {
+        const backendType = mode === "work" ? "focus" : mode === "shortBreak" ? "short_break" : "long_break";
+        const res = await api.post<{ id: string }>("/focus/sessions", { type: backendType });
+        setCurrentSessionId(res.data.id);
+        sessionRef.current = res.data.id;
+      } else {
+        await api.post(`/focus/sessions/${sessionRef.current}/resume`);
+      }
+      setRunning(true);
+    } catch (err) {
+      console.error("Failed to start/resume focus session:", err);
+    }
+  };
+
+  const pauseSession = async () => {
+    if (!sessionRef.current) return;
+    try {
+      await api.post(`/focus/sessions/${sessionRef.current}/pause`);
+      setRunning(false);
+    } catch (err) {
+      console.error("Failed to pause focus session:", err);
+    }
+  };
+
+  const resetSession = async () => {
+    clearInterval(intervalRef.current!);
+    setRunning(false);
+    setSeconds(MODES[mode].seconds);
+    if (sessionRef.current) {
+      try {
+        await api.post(`/focus/sessions/${sessionRef.current}/stop?status=cancelled`);
+      } catch (err) {
+        console.error("Failed to cancel focus session:", err);
+      }
+      setCurrentSessionId(null);
+      sessionRef.current = null;
+    }
+  };
+
+  const completeSession = async () => {
+    setRunning(false);
+    if (mode === "work") setSessions((s) => s + 1);
+    if (sessionRef.current) {
+      try {
+        await api.post(`/focus/sessions/${sessionRef.current}/stop?status=completed`);
+        queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      } catch (err) {
+        console.error("Failed to complete focus session:", err);
+      }
+      setCurrentSessionId(null);
+      sessionRef.current = null;
+    }
+  };
 
   // Start or stop the countdown when `running` changes
   useEffect(() => {
@@ -31,8 +92,7 @@ export default function FocusTimer() {
           if (prev <= 1) {
             // Timer finished
             clearInterval(intervalRef.current!);
-            setRunning(false);
-            if (mode === "work") setSessions((s) => s + 1);
+            completeSession();
             return 0;
           }
           return prev - 1;
@@ -50,6 +110,11 @@ export default function FocusTimer() {
     setRunning(false);
     setMode(newMode);
     setSeconds(MODES[newMode].seconds);
+    if (currentSessionId) {
+      api.post(`/focus/sessions/${currentSessionId}/stop?status=cancelled`).catch(console.error);
+      setCurrentSessionId(null);
+      sessionRef.current = null;
+    }
   }
 
   // Format seconds as "MM:SS"
@@ -122,17 +187,13 @@ export default function FocusTimer() {
       {/* Start / Pause and Reset buttons */}
       <div className="flex gap-2 justify-center">
         <button
-          onClick={() => setRunning((r) => !r)}
+          onClick={running ? pauseSession : startOrResumeSession}
           className="px-5 py-2 bg-cixio-blue text-white text-sm rounded-lg hover:bg-cixio-hover transition-colors"
         >
           {running ? "Pause" : "Start"}
         </button>
         <button
-          onClick={() => {
-            clearInterval(intervalRef.current!);
-            setRunning(false);
-            setSeconds(MODES[mode].seconds);
-          }}
+          onClick={resetSession}
           className="px-4 py-2 border border-gray-200 text-sm rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
         >
           Reset

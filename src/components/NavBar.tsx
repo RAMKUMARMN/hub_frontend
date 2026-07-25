@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { getMediaUrl } from "@/lib/api";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -112,8 +113,12 @@ export default function NavBar() {
                 : "hover:bg-white/10"
             }`}
           >
-            <div className="w-7 h-7 rounded-full bg-cixio-blue flex items-center justify-center text-white text-xs font-bold">
-              {user.full_name?.charAt(0).toUpperCase()}
+            <div className="w-7 h-7 rounded-full bg-cixio-blue flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+              {user.avatar_url ? (
+                <img src={getMediaUrl(user.avatar_url)!} alt={user.full_name || "User"} className="w-full h-full object-cover" />
+              ) : (
+                user.full_name?.charAt(0).toUpperCase()
+              )}
             </div>
             <span className="text-sm text-cixio-light/80">{user.full_name}</span>
           </Link>
