@@ -1,6 +1,6 @@
 # Frontend — CixioHub Web Application
 
-Next.js 14 web app for CixioHub. Provides the full chat UI, document management, todos, and user profile.
+Next.js 16 web app for CixioHub. Provides the full chat UI, document management, todos, and user profile.
 
 ---
 
@@ -8,7 +8,7 @@ Next.js 14 web app for CixioHub. Provides the full chat UI, document management,
 
 | Tool | Purpose |
 |------|---------|
-| **Next.js 14** | React framework with App Router |
+| **Next.js 16** | React framework with App Router |
 | **TypeScript** | Type safety |
 | **Tailwind CSS** | Utility-first styling |
 | **shadcn/ui** | Pre-built accessible components |
@@ -124,6 +124,13 @@ npm run dev
 ```bash
 npm run build
 npm run start
+```
+
+### 6. Run with Docker (Optional)
+
+```bash
+docker build -t hub_frontend .
+docker run -p 3000:3000 --env-file .env.local hub_frontend
 ```
 
 ---

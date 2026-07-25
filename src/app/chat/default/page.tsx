@@ -104,6 +104,7 @@ export default function ChatSessionPage() {
       const res = await api.get("/documents");
       return res.data;
     },
+    refetchInterval: 3000,
   });
 
   // Filter documents to show those belonging to the current session or global ones (session_id is null)
