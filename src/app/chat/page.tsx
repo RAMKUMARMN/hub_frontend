@@ -1,59 +1,35 @@
 "use client";
 
-/**
- * Chat page — /chat
- *
- * Redirects to the most recent session, or shows a "Start a new chat" prompt.
- *
- * TODO:
- *  1. Fetch list of sessions via GET /api/v1/chat/sessions
- *  2. If sessions exist, redirect to /chat/[most-recent-session-id]
- *  3. Otherwise render a centered "Start chatting" button that POSTs /chat/sessions
- */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import api from "@/lib/api";
-import type { ChatSession } from "@/types";
+import { useSessions, useCreateSession } from "@/hooks/useChat";
 
-export default function ChatIndexPage() {
+export default function ChatPage() {
   const router = useRouter();
-
-  const { data: sessions, isLoading } = useQuery({
-    queryKey: ["sessions"],
-    queryFn: () => api.get<ChatSession[]>("/chat/sessions").then((r) => r.data),
-  });
-
-  const createSession = useMutation({
-    mutationFn: () => api.post<ChatSession>("/chat/sessions", { title: "New Chat" }),
-    onSuccess: (res) => router.push(`/chat/${res.data.id}`),
-  });
+  const { data: sessions, isLoading } = useSessions();
+  const { mutate: createSession, isPending } = useCreateSession();
 
   useEffect(() => {
-    if (sessions && sessions.length > 0) {
-      router.replace(`/chat/${sessions[0].id}`);
+    if (!isLoading && !isPending) {
+      // If there are existing sessions, redirect to the first one
+      if (sessions && sessions.length > 0) {
+        router.push("/chat/default");
+      } else {
+        // Otherwise create a new session
+        createSession(undefined, {
+          onSuccess: () => {
+            router.push("/chat/default");
+          },
+        });
+      }
     }
-  }, [sessions, router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
-      </div>
-    );
-  }
+  }, [sessions, isLoading, isPending, createSession, router]);
 
   return (
-    <div className="flex h-screen items-center justify-center">
+    <div className="flex items-center justify-center h-full">
       <div className="text-center">
-        <h2 className="text-xl font-semibold mb-2">Welcome to CixioHub</h2>
-        <p className="text-gray-500 mb-4">Start a conversation with the AI assistant</p>
-        <button
-          onClick={() => createSession.mutate()}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-        >
-          New Chat
-        </button>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cixio-blue mb-4"></div>
+        <p className="text-gray-500 dark:text-gray-400">Loading chat...</p>
       </div>
     </div>
   );

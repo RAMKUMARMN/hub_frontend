@@ -150,7 +150,7 @@ npm run start
 - Client-side validation with Zod
 - On success: auto-login, redirect to `/chat`
 
-### `/chat/[sessionId]` — Chat Interface
+### `/chat/default` — Chat Interface
 
 This is the core screen. Build it carefully.
 

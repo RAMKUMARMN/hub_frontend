@@ -117,7 +117,7 @@ function QuestionCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-2xl p-6 mb-4 shadow-sm border-[1.5px] transition-all
+      className={`bg-white dark:bg-gray-900 rounded-2xl p-6 mb-4 shadow-sm border-[1.5px] transition-all
         ${hasError ? "border-red-400" : "border-transparent focus-within:border-cixio-blue focus-within:shadow-[0_0_0_3px_rgba(18,89,251,0.1)]"}`}
     >
       <div className="flex items-start gap-3 mb-4">
@@ -209,8 +209,8 @@ export default function PollPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-cixio-bg flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-10 text-center max-w-md shadow-sm">
+      <div className="min-h-screen bg-cixio-bg dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-10 text-center max-w-md shadow-sm">
           <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4">
             ✓
           </div>
@@ -225,7 +225,7 @@ export default function PollPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cixio-bg py-8 px-4">
+    <div className="min-h-screen bg-cixio-bg dark:bg-gray-950 py-8 px-4">
       <div className="max-w-2xl mx-auto">
 
         {/* Header */}
@@ -250,7 +250,7 @@ export default function PollPage() {
         </div>
 
         {/* Progress */}
-        <div className="bg-white rounded-xl p-4 mb-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 dark:border dark:border-gray-800 rounded-xl p-4 mb-6 shadow-sm">
           <div className="flex justify-between text-xs font-semibold text-cixio-muted mb-2">
             <span>Your progress</span>
             <span>{answeredCount} / {TOTAL_REQUIRED} answered</span>
@@ -437,13 +437,13 @@ export default function PollPage() {
             Section 5 · Your Voice (Optional)
           </p>
 
-          <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border-[1.5px] border-transparent focus-within:border-cixio-blue">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 mb-6 shadow-sm border-[1.5px] border-transparent focus-within:border-cixio-blue">
             <div className="flex items-start gap-3 mb-4">
               <span className="bg-cixio-light text-cixio-blue text-xs font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0 mt-0.5">
                 Q13
               </span>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Anything specific you'd like your mentor to know?</p>
+                <p className="text-sm font-semibold text-gray-900">Anything specific you&apos;d like your mentor to know?</p>
                 <p className="text-xs text-cixio-muted mt-0.5">Blockers, feedback, suggestions — anything goes. This is anonymous.</p>
               </div>
             </div>
@@ -452,7 +452,7 @@ export default function PollPage() {
               onChange={(e) => setForm((f) => ({ ...f, q13_open_feedback: e.target.value }))}
               maxLength={800}
               placeholder="Type your message here…"
-              className="w-full border-[1.5px] border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-y min-h-[90px] outline-none focus:border-cixio-blue focus:shadow-[0_0_0_3px_rgba(18,89,251,0.1)] transition-all font-sans"
+              className="w-full border-[1.5px] border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 placeholder:text-gray-400 resize-y min-h-[90px] outline-none focus:border-cixio-blue focus:shadow-[0_0_0_3px_rgba(18,89,251,0.1)] transition-all font-sans"
             />
           </div>
 
