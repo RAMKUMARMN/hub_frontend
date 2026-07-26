@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,6 +47,31 @@ export default function LoginPage() {
       .catch((err) => console.error("Error loading oauth config:", err));
   }, []);
 
+  // 3. Callback to handle Google token payload and sign in on backend
+  const handleGoogleLoginCallback = useCallback(async (response: any) => {
+    setError(null);
+    try {
+      const idToken = response.credential;
+      const tokenRes = await api.post<TokenResponse>(buildApiUrl("/auth/google"), {
+        id_token: idToken,
+      });
+      const { access_token, refresh_token } = tokenRes.data;
+
+      setTokens(access_token, refresh_token);
+
+      // Fetch current user profile
+      const userRes = await api.get<User>(buildApiUrl("/auth/me"));
+
+      setAuth(userRes.data, access_token, refresh_token);
+      router.push("/dashboard");
+    } catch (err: any) {
+      const message =
+        err.response?.data?.detail ??
+        "Google Sign-In failed. Check your credentials.";
+      setError(message);
+    }
+  }, [router, setAuth, setTokens]);
+
   // 2. Load Google Identity Services script and render button
   useEffect(() => {
     if (!googleClientId) return;
@@ -75,32 +100,7 @@ export default function LoginPage() {
         document.body.removeChild(script);
       }
     };
-  }, [googleClientId]);
-
-  // 3. Callback to handle Google token payload and sign in on backend
-  const handleGoogleLoginCallback = async (response: any) => {
-    setError(null);
-    try {
-      const idToken = response.credential;
-      const tokenRes = await api.post<TokenResponse>(buildApiUrl("/auth/google"), {
-        id_token: idToken,
-      });
-      const { access_token, refresh_token } = tokenRes.data;
-
-      setTokens(access_token, refresh_token);
-
-      // Fetch current user profile
-      const userRes = await api.get<User>(buildApiUrl("/auth/me"));
-
-      setAuth(userRes.data, access_token, refresh_token);
-      router.push("/dashboard");
-    } catch (err: any) {
-      const message =
-        err.response?.data?.detail ??
-        "Google Sign-In failed. Check your credentials.";
-      setError(message);
-    }
-  };
+  }, [googleClientId, handleGoogleLoginCallback]);
 
   const onSubmit = async (data: FormData) => {
     setError(null);

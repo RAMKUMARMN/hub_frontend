@@ -26,7 +26,10 @@ export default function FocusTimer() {
   const queryClient = useQueryClient();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const sessionRef = useRef<string | null>(null);
-  sessionRef.current = currentSessionId;
+
+  useEffect(() => {
+    sessionRef.current = currentSessionId;
+  }, [currentSessionId]);
 
   const startOrResumeSession = async () => {
     try {
