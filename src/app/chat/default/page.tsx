@@ -17,6 +17,7 @@ type ChatMessage = {
   content: string;
   thinking?: string;
   thinking_enabled?: boolean;
+  status?: string;
   sources?: {
     filename?: string;
     text?: string;
@@ -101,7 +102,7 @@ export default function ChatSessionPage() {
   const { data: allDocuments } = useQuery<any[]>({
     queryKey: ["all-documents"],
     queryFn: async () => {
-      const res = await api.get("/documents");
+      const res = await api.get("/documents/");
       return res.data;
     },
     refetchInterval: 3000,
@@ -294,6 +295,12 @@ export default function ChatSessionPage() {
                   }
                   return msg;
                 })
+              );
+            } else if ("status" in parsed) {
+              setLocalMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempAssistantId ? { ...msg, status: parsed.status } : msg
+                )
               );
             } else if ("thinking" in parsed) {
               console.log("💡 Received thinking token:", parsed.thinking);
@@ -507,15 +514,19 @@ export default function ChatSessionPage() {
                     <div className="bg-gray-100 dark:bg-gray-800 rounded-xl rounded-bl-sm px-3 py-2 text-sm prose prose-sm dark:prose-invert max-w-none min-w-[140px]">
                       {m.content ? (
                         <AIMessage content={m.content} />
-                      ) : (
+                      ) : isAsking && index === localMessages.length - 1 ? (
                         <div className="flex items-center gap-2 py-1 text-gray-500 dark:text-gray-400">
-                          <span className="text-xs font-medium">Typing</span>
+                          <span className="text-xs font-medium animate-pulse">
+                            {m.status || "Typing"}
+                          </span>
                           <div className="flex items-center space-x-1 h-2">
                             <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
                             <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
                             <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
                           </div>
                         </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">No answer content generated.</span>
                       )}
                     </div>
                   </>

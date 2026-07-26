@@ -72,7 +72,7 @@ function useDocs(initialData?: Doc[]) {
   return useQuery<Doc[]>({
     queryKey: ["documents"],
     queryFn: async () => {
-      const res = await api.get<any[]>("/documents");
+      const res = await api.get<any[]>("/documents/");
       return res.data.map((d) => ({
         id: d.id,
         name: d.filename || "Unknown",
