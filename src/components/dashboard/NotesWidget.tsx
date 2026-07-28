@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import api from "@/lib/api";
 
 interface Note {
@@ -19,13 +20,32 @@ function formatUpdatedAt(value: string) {
 }
 
 export default function NotesWidget() {
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const { data: notes = [], isLoading, isError } = useQuery<Note[]>({
     queryKey: ["dashboard-notes"],
     queryFn: async () => {
-      const res = await api.get<Note[]>("/notes", { params: { limit: 4 } });
+      const res = await api.get<Note[]>("/notes/", { params: { limit: 4 } });
       return res.data;
     },
     staleTime: 1000 * 60 * 2,
+  });
+
+  const deleteNote = useMutation({
+    mutationFn: async (noteId: string) => {
+      await api.delete(`/notes/${noteId}`);
+    },
+    onMutate: (noteId) => {
+      setDeletingId(noteId);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+    onSettled: () => {
+      setDeletingId(null);
+    },
   });
 
   const recentNotes = useMemo(() => notes.slice(0, 4), [notes]);
@@ -57,15 +77,30 @@ export default function NotesWidget() {
           {recentNotes.map((note) => (
             <li
               key={note.id}
-              className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+              className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors group"
             >
-              <div className="flex items-center justify-between mb-2 gap-3">
-                <p className="text-sm font-medium text-gray-800 truncate">
+              <div className="flex items-center justify-between mb-1 gap-3">
+                <p className="text-sm font-medium text-gray-800 truncate flex-1">
                   {note.title}
                 </p>
-                <span className="text-xs text-gray-400 shrink-0">
-                  {formatUpdatedAt(note.updated_at)}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-gray-400">
+                    {formatUpdatedAt(note.updated_at)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete note "${note.title}"?`)) {
+                        deleteNote.mutate(note.id);
+                      }
+                    }}
+                    disabled={deletingId === note.id}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all disabled:opacity-50"
+                    title="Delete note"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <p className="text-xs text-gray-500 line-clamp-2">{note.excerpt}</p>
             </li>

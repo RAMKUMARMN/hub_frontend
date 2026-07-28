@@ -31,7 +31,7 @@ export default function DocsWidget() {
   const { data: docs = [], isLoading, isError } = useQuery<DashboardDocument[]>({
     queryKey: ["dashboard-docs"],
     queryFn: async () => {
-      const res = await api.get<DashboardDocument[]>("/documents", { params: { limit: 4 } });
+      const res = await api.get<DashboardDocument[]>("/documents/", { params: { limit: 4 } });
       return res.data;
     },
     staleTime: 1000 * 60 * 2,

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import api from "@/lib/api";
 
 interface Note {
@@ -28,6 +29,13 @@ function formatUpdatedAt(value: string) {
 function NoteFormPanel({ onSave, saving }: { onSave: (data: NoteForm) => void; saving: boolean }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+
+  const handleFormSubmit = () => {
+    if (!title.trim() || !content.trim()) return;
+    onSave({ title: title.trim(), content: content.trim() });
+    setTitle("");
+    setContent("");
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
@@ -59,7 +67,7 @@ function NoteFormPanel({ onSave, saving }: { onSave: (data: NoteForm) => void; s
         </div>
 
         <button
-          onClick={() => onSave({ title: title.trim(), content: content.trim() })}
+          onClick={handleFormSubmit}
           disabled={saving || !title.trim() || !content.trim()}
           className="inline-flex items-center justify-center rounded-lg bg-cixio-blue px-4 py-2 text-sm font-medium text-white hover:bg-cixio-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -73,12 +81,13 @@ function NoteFormPanel({ onSave, saving }: { onSave: (data: NoteForm) => void; s
 export default function NotesPage() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: notes = [], isLoading, isError } = useQuery<Note[]>({
     queryKey: ["notes"],
     queryFn: async () => {
-      const res = await api.get<Note[]>("/notes");
+      const res = await api.get<Note[]>("/notes/");
       return res.data;
     },
   });
@@ -90,7 +99,7 @@ export default function NotesPage() {
 
   const createNote = useMutation({
     mutationFn: async (note: NoteForm) => {
-      const res = await api.post<Note>("/notes", note);
+      const res = await api.post<Note>("/notes/", note);
       return res.data;
     },
     onMutate: () => {
@@ -99,12 +108,33 @@ export default function NotesPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-notes"] });
     },
     onError: (err) => {
       setErrorMessage("Unable to save note. Please try again.");
     },
     onSettled: () => {
       setSaving(false);
+    },
+  });
+
+  const deleteNote = useMutation({
+    mutationFn: async (noteId: string) => {
+      await api.delete(`/notes/${noteId}`);
+    },
+    onMutate: (noteId) => {
+      setDeletingId(noteId);
+      setErrorMessage(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-notes"] });
+    },
+    onError: () => {
+      setErrorMessage("Unable to delete note. Please try again.");
+    },
+    onSettled: () => {
+      setDeletingId(null);
     },
   });
 
@@ -143,12 +173,24 @@ export default function NotesPage() {
             ) : (
               <div className="space-y-4">
                 {sortedNotes.map((note) => (
-                  <article key={note.id} className="border border-gray-100 rounded-2xl p-4 hover:bg-gray-50 transition-colors">
+                  <article key={note.id} className="border border-gray-100 rounded-2xl p-4 hover:bg-gray-50 transition-colors group">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <h3 className="text-base font-semibold text-gray-900">{note.title}</h3>
                         <p className="text-xs text-gray-500 mt-1">Updated {formatUpdatedAt(note.updated_at)}</p>
                       </div>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete "${note.title}"?`)) {
+                            deleteNote.mutate(note.id);
+                          }
+                        }}
+                        disabled={deletingId === note.id}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 shrink-0"
+                        title="Delete note"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     <p className="text-sm text-gray-600 mt-3 line-clamp-3">{note.excerpt || note.content.slice(0, 160)}</p>
                   </article>
