@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { getMediaUrl } from "@/lib/api";
 
@@ -36,11 +37,13 @@ export default function NavBar() {
   const pathname = usePathname();
   const router   = useRouter();
   const { user, clearAuth } = useAuthStore();
+  const queryClient = useQueryClient();
 
   // Hide navbar on auth pages or until client-side mounting is complete
   if (!mounted || AUTH_PATHS.some((p) => pathname.startsWith(p))) return null;
 
   const handleLogout = () => {
+    queryClient.clear();
     clearAuth();
     router.push("/auth/login");
   };
